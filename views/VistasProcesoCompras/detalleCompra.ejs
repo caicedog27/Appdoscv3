@@ -1,0 +1,283 @@
+<!-- views/VistasProcesoCompras/detalleCompra.ejs -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title><%= title %></title>
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body>
+
+<div class="container my-4">
+  <h1><%= title %></h1>
+  <p><strong>ID de Compra:</strong> <%= compraId %></p>
+
+  <p>
+    <strong>Creado por:</strong> 
+    <% if (usuario) { %>
+      <%= usuario.email || usuario.name || compraData.userUid %>
+    <% } else { %>
+      <%= compraData.userUid %>
+    <% } %>
+  </p>
+  <p>
+    <strong>Fecha:</strong>
+    <% if (compraData.createdAt) { %>
+      <%= compraData.createdAt.toDate().toLocaleString() %>
+    <% } %>
+  </p>
+
+  <!-- mainState general -->
+  <p><strong>Estado General:</strong> <%= compraData.mainState || 'NEGOCIACION' %></p>
+
+  <!-- Progreso -->
+  <div class="mb-3">
+    <label><strong>Progreso:</strong></label>
+    <div class="progress" style="width:250px;">
+      <div class="progress-bar" role="progressbar" 
+           style="width: <%= progress %>%;">
+        <%= progress %>%
+      </div>
+    </div>
+  </div>
+
+  <% const mainState = compraData.mainState || 'NEGOCIACION'; %>
+  <!-- Ejemplo: si mainState === 'NEGOCIACION', mostrar un alert -->
+  <% if (mainState === 'NEGOCIACION') { %>
+    <div class="alert alert-warning">
+      <strong>Negociación en curso.</strong> Ajusta precios y marca ítems no encontrados.
+    </div>
+  <% } else if (mainState === 'APROBACION_PRECIOS') { %>
+    <div class="alert alert-info">
+      <strong>Aprobación de precios.</strong> Un admin verifica o rechaza valores negociados.
+    </div>
+  <% } else if (mainState === 'ORDEN_COMPRA') { %>
+    <div class="alert alert-success">
+      <strong>Orden de Compra lista.</strong> Genera PDF, fija fecha de entrega...
+    </div>
+  <% } else if (mainState === 'EN_CAMINO') { %>
+    <div class="alert alert-secondary">
+      <strong>En Camino.</strong> Esperando la llegada...
+    </div>
+  <% } else if (mainState === 'RECIBIDO') { %>
+    <div class="alert alert-dark">
+      <strong>Compra finalizada</strong>.
+    </div>
+  <% } %>
+
+  <!-- (Opcional) form para avanzar mainState (si no es RECIBIDO) -->
+  <% if (mainState !== 'RECIBIDO') { %>
+    <form class="mb-3" onsubmit="return advanceMainState(event, this)">
+      <label>Avanzar a:</label>
+      <select name="newMainState" class="form-select" style="width:200px; display:inline-block;">
+        <% const statesOrder = ['NEGOCIACION','APROBACION_PRECIOS','ORDEN_COMPRA','EN_CAMINO','RECIBIDO']; %>
+        <% const currentIdx = statesOrder.indexOf(mainState); %>
+        <% const nextStates = statesOrder.slice(currentIdx+1); %>
+        <% nextStates.forEach(st => { %>
+          <option value="<%= st %>"><%= st %></option>
+        <% }) %>
+      </select>
+      <button type="submit" class="btn btn-sm btn-primary">Avanzar</button>
+    </form>
+  <% } %>
+
+  <!-- Agrupado por proveedor -->
+  <% const providerIds = Object.keys(groupedByProvider); %>
+  <div class="accordion" id="accordionProviders">
+    <% providerIds.forEach((provId, idx) => {
+       const items = groupedByProvider[provId];
+       const pName = items[0]?.providerName || ('Proveedor ' + provId);
+    %>
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="heading_<%= provId %>">
+          <button class="accordion-button collapsed" type="button"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#collapse_<%= provId %>"
+                  aria-expanded="false">
+            <%= pName %> (ID: <%= provId %>) - <%= items.length %> productos
+          </button>
+        </h2>
+        <div id="collapse_<%= provId %>"
+             class="accordion-collapse collapse"
+             data-bs-parent="#accordionProviders">
+          <div class="accordion-body">
+            <table class="table table-bordered">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Nombre</th>
+                  <th>Cantidad</th>
+                  <th>Precio Negociado</th>
+                  <th>Estado</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <% items.forEach(item => { %>
+                  <tr>
+                    <td><%= item.code %></td>
+                    <td><%= item.name %></td>
+                    <td><%= item.quantityToBuy %></td>
+                    <td>
+                      <form class="d-flex gap-1" onsubmit="return actualizarProducto(event, this)">
+                        <input type="hidden" name="oldProviderId" value="<%= item.providerId %>">
+                        <input type="hidden" name="code" value="<%= item.code %>">
+
+                        <input type="number" step="0.01" class="form-control form-control-sm"
+                               name="negotiatedPrice"
+                               value="<%= item.negotiatedPrice || '' %>"
+                               placeholder="Precio final">
+
+                        <button class="btn btn-sm btn-secondary" type="submit">
+                          Guardar
+                        </button>
+                      </form>
+                    </td>
+                    <td>
+                      <%= item.state || 'COTIZACION' %>
+                      <select onchange="cambiarEstadoItem(event, '<%= item.code %>', '<%= item.providerId %>')"
+                              class="form-select form-select-sm" style="width:auto;">
+                        <option value="COTIZACION" 
+                          <%= item.state === 'COTIZACION' ? 'selected' : '' %>>COTIZACION</option>
+                        <option value="NO_ENCONTRADO"
+                          <%= item.state === 'NO_ENCONTRADO' ? 'selected' : '' %>>NO_ENCONTRADO</option>
+                        <option value="ASIGNANDO_PRECIOS"
+                          <%= item.state === 'ASIGNANDO_PRECIOS' ? 'selected' : '' %>>ASIGNANDO_PRECIOS</option>
+                        <option value="ORDEN_ENVIADA"
+                          <%= item.state === 'ORDEN_ENVIADA' ? 'selected' : '' %>>ORDEN_ENVIADA</option>
+                        <option value="ESPERANDO_CONF_ENTREGA"
+                          <%= item.state === 'ESPERANDO_CONF_ENTREGA' ? 'selected' : '' %>>ESPERANDO_CONF_ENTREGA</option>
+                        <option value="EN_CAMINO"
+                          <%= item.state === 'EN_CAMINO' ? 'selected' : '' %>>EN_CAMINO</option>
+                        <option value="RECIBIDO"
+                          <%= item.state === 'RECIBIDO' ? 'selected' : '' %>>RECIBIDO</option>
+                      </select>
+                    </td>
+                    <td>
+                      <!-- Generar PDF sólo de este item? Normalmente es x proveedor. -->
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+
+            <!-- Botón PDF por proveedor -->
+            <a class="btn btn-info"
+               href="/inventarios/popping/procesoCompra/<%= compraId %>/pdf/<%= provId %>"
+               target="_blank">
+              Generar PDF
+            </a>
+          </div>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+
+  <hr />
+  <h4>Adjuntar Documentos</h4>
+  <form action="/inventarios/popping/procesoCompra/<%= compraId %>/adjuntar"
+        method="post" enctype="multipart/form-data">
+    <div class="mb-2">
+      <input type="file" name="file" class="form-control" />
+    </div>
+    <button class="btn btn-primary" type="submit">Subir</button>
+  </form>
+
+  <% if (compraData.attachments) { %>
+    <h5 class="mt-3">Documentos Subidos:</h5>
+    <ul>
+      <% compraData.attachments.forEach(att => { %>
+        <li><a href="<%= att.url %>" target="_blank"><%= att.name %></a></li>
+      <% }) %>
+    </ul>
+  <% } %>
+</div>
+
+<script 
+  src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js">
+</script>
+
+<script>
+  // 1) Avanzar mainState
+  async function advanceMainState(e, formEl) {
+    e.preventDefault();
+    const formData = new FormData(formEl);
+    const newMainState = formData.get('newMainState');
+    const docId = '<%= compraId %>';
+
+    try {
+      const resp = await fetch('/inventarios/popping/procesoCompra/' + docId + '/changeMainState', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newMainState })
+      });
+      const data = await resp.json();
+      if (data.success) {
+        alert('Estado general cambiado a: ' + newMainState);
+        window.location.reload();
+      } else {
+        alert('Error: ' + data.error);
+      }
+    } catch (err) {
+      alert('Error: ' + err);
+    }
+    return false;
+  }
+
+  // 2) Cambiar estado de un item
+  async function cambiarEstadoItem(e, code, providerId) {
+    const newState = e.target.value;
+    const docId = '<%= compraId %>';
+    try {
+      const resp = await fetch('/inventarios/popping/procesoCompra/' + docId + '/actualizarEstado', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, providerId, newState })
+      });
+      const data = await resp.json();
+      if (data.success) {
+        alert('Item: ' + code + ' => ' + newState);
+        window.location.reload();
+      } else {
+        alert('Error: ' + data.error);
+      }
+    } catch (err) {
+      alert('Error: ' + err);
+    }
+  }
+
+  // 3) Actualizar negotiatedPrice, etc.
+  async function actualizarProducto(event, formEl) {
+    event.preventDefault();
+    const formData = new FormData(formEl);
+    const code = formData.get('code');
+    const oldProviderId = formData.get('oldProviderId');
+    const negotiatedPrice = formData.get('negotiatedPrice');
+
+    const docId = '<%= compraId %>';
+    try {
+      const resp = await fetch('/inventarios/popping/procesoCompra/' + docId + '/actualizarProducto', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code,
+          oldProviderId,
+          negotiatedPrice
+        })
+      });
+      const data = await resp.json();
+      if (data.success) {
+        alert('Producto actualizado');
+        window.location.reload();
+      } else {
+        alert('Error: ' + data.error);
+      }
+    } catch (err) {
+      alert('Error: ' + err);
+    }
+    return false;
+  }
+</script>
+</body>
+</html>

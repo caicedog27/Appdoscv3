@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title><%= title %></title>
+  <link 
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"/>
+  <style>
+    /*****************************************************************
+     * Animación de aparición para el contenedor
+     *****************************************************************/
+    .fade-in {
+      animation: fadeInContainer 0.6s ease forwards;
+      opacity: 0;
+    }
+    @keyframes fadeInContainer {
+      to { opacity: 1; }
+    }
+
+    /*****************************************************************
+     * Tabla y filas con animación de aparición/desaparición
+     *****************************************************************/
+    .table-container {
+      position: relative;
+      overflow: hidden;
+    }
+    /* Transiciones suaves en las filas */
+    .table-hover tbody tr {
+      transition: opacity 0.3s ease;
+    }
+    .table-hover tr.hide-row {
+      opacity: 0;
+      pointer-events: none;
+      height: 0;
+      transition: opacity 0.3s ease, height 0.3s ease;
+    }
+
+    /*****************************************************************
+     * Personalizaciones de la tabla
+     *****************************************************************/
+    .table-hover tbody tr:hover {
+      background-color: #f9f9f9;
+    }
+
+    /* Barra de progreso personalizada */
+    .progress-custom {
+      width: 120px;
+      height: 18px;
+      background-color: #e9ecef;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .progress-bar-custom {
+      background: linear-gradient(45deg, #007bff, #6c757d);
+      height: 100%;
+      transition: width 0.4s ease;
+    }
+
+    /* Pequeños "badges" para estados */
+    .state-badge {
+      font-size: 0.75rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #fff;
+    }
+    .negociacion-badge   { background-color: #ffc107; }
+    .aprobacion-badge    { background-color: #17a2b8; }
+    .orden_compra-badge  { background-color: #28a745; }
+    .en_camino-badge     { background-color: #6f42c1; }
+    .recibido-badge      { background-color: #343a40; }
+
+    /*****************************************************************
+     * Estilos adaptados para pantallas pequeñas
+     *****************************************************************/
+    @media (max-width: 576px) {
+      .table thead {
+        display: none;
+      }
+      .table tbody tr {
+        margin-bottom: 1rem;
+        display: block;
+        border: 1px solid #dee2e6;
+      }
+      .table tbody td {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem;
+      }
+      .table tbody td::before {
+        content: attr(data-label);
+        font-weight: bold;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="container fade-in my-4">
+  <h1 class="mb-4 text-center"><%= title %></h1>
+
+  <!-- Filtros -->
+  <div class="mb-4">
+    <form id="filterForm" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label for="filterEstado" class="form-label">Estado</label>
+        <select id="filterEstado" class="form-select">
+          <option value="">Todos</option>
+          <option value="NEGOCIACION">Negociación</option>
+          <option value="APROBACION">Aprobación</option>
+          <option value="ORDEN_COMPRA">Orden de Compra</option>
+          <option value="EN_CAMINO">En Camino</option>
+          <option value="RECIBIDO">Recibido</option>
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label for="filterUsuario" class="form-label">Usuario</label>
+        <input type="text" id="filterUsuario" class="form-control" placeholder="Filtrar por usuario">
+      </div>
+
+      <div class="col-md-3">
+        <label for="filterFecha" class="form-label">Fecha Creación</label>
+        <input type="date" id="filterFecha" class="form-control">
+      </div>
+
+      <div class="col-md-3 d-flex gap-2">
+        <button 
+          type="button" 
+          class="btn btn-primary w-100" 
+          onclick="aplicarFiltros()">
+          Aplicar
+        </button>
+        <button 
+          type="button" 
+          class="btn btn-secondary w-100" 
+          onclick="resetFiltros()">
+          Reset
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Tabla de Compras -->
+  <% if (compras.length === 0) { %>
+    <div class="alert alert-info text-center">
+      No hay compras registradas aún.
+    </div>
+  <% } else { %>
+    <div class="table-responsive table-container">
+      <table class="table table-hover align-middle" id="comprasTable">
+        <thead class="table-light">
+          <tr>
+            <th>ID</th>
+            <th>Fecha Creación</th>
+            <th>Usuario</th>
+            <th>Estado</th>
+            <th>Progreso</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% compras.forEach(c => {
+             const state = (c.mainState || 'NEGOCIACION').toUpperCase();
+             let badgeClass = 'negociacion-badge';
+             switch (state) {
+               case 'APROBACION':   badgeClass = 'aprobacion-badge'; break;
+               case 'ORDEN_COMPRA': badgeClass = 'orden_compra-badge'; break;
+               case 'EN_CAMINO':    badgeClass = 'en_camino-badge'; break;
+               case 'RECIBIDO':     badgeClass = 'recibido-badge'; break;
+             }
+          %>
+            <tr>
+              <!-- ID -->
+              <td data-label="ID">
+                <strong><%= c.id %></strong>
+              </td>
+              
+              <!-- Fecha creación -->
+              <td data-label="Fecha Creación">
+                <% if (c.createdAt) { %>
+                  <%= c.createdAt.toDate().toLocaleString() %>
+                <% } else { %>
+                  <em class="text-muted">-</em>
+                <% } %>
+              </td>
+
+              <!-- Usuario -->
+              <td data-label="Usuario">
+                <%= c.userUid || '(Desconocido)' %>
+              </td>
+
+              <!-- Estado (badge) -->
+              <td data-label="Estado">
+                <span class="state-badge <%= badgeClass %>">
+                  <%= state %>
+                </span>
+              </td>
+
+              <!-- Progreso -->
+              <td data-label="Progreso">
+                <div class="progress-custom">
+                  <div 
+                    class="progress-bar-custom"
+                    style="width: <%= c.progress %>%;">
+                  </div>
+                </div>
+                <small><%= c.progress %>%</small>
+              </td>
+
+              <!-- Acciones -->
+              <td data-label="Acciones">
+                <a href="/inventarios/popping/procesoCompra/<%= c.id %>"
+                   class="btn btn-sm btn-outline-primary">
+                  Procesar
+                </a>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</div>
+
+<script 
+  src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js">
+</script>
+<script>
+  /*******************************************************************
+   * FILTROS DINÁMICOS
+   * - Se activan al cambiar o digitar en cualquier campo de filtro.
+   * - Se incluye una función "resetFiltros" para volver a mostrar todo.
+   *******************************************************************/
+
+  // Elementos de filtro
+  const filterEstadoEl = document.getElementById('filterEstado');
+  const filterUsuarioEl = document.getElementById('filterUsuario');
+  const filterFechaEl   = document.getElementById('filterFecha');
+
+  // Asignar eventos para filtrar dinámicamente
+  filterEstadoEl.addEventListener('change', aplicarFiltros);
+  filterUsuarioEl.addEventListener('input', aplicarFiltros);
+  filterFechaEl.addEventListener('change', aplicarFiltros);
+
+  function aplicarFiltros() {
+    const estado = filterEstadoEl.value.toUpperCase();
+    const usuario = filterUsuarioEl.value.toLowerCase();
+    const fecha = filterFechaEl.value;
+
+    const rows = document.querySelectorAll('#comprasTable tbody tr');
+    rows.forEach(row => {
+      const estadoRow = row.querySelector('td:nth-child(4)').innerText.trim().toUpperCase();
+      const usuarioRow = row.querySelector('td:nth-child(3)').innerText.trim().toLowerCase();
+      const fechaRow = row.querySelector('td:nth-child(2)').innerText.trim().split(' ')[0];
+
+      let mostrar = true;
+      if (estado && estado !== estadoRow)    mostrar = false;
+      if (usuario && !usuarioRow.includes(usuario)) mostrar = false;
+      if (fecha && fecha !== fechaRow)       mostrar = false;
+
+      // Aplica animación agregando/removiendo la clase "hide-row"
+      if (!mostrar) {
+        row.classList.add('hide-row');
+        // Para compatibilidad, podrías usar setTimeout para ocultarlo completamente.
+        setTimeout(() => {
+          row.style.display = 'none';
+        }, 300);
+      } else {
+        // Removemos display none y hide-row con un ligero retardo
+        row.style.display = '';
+        setTimeout(() => {
+          row.classList.remove('hide-row');
+        }, 0);
+      }
+    });
+  }
+
+  function resetFiltros() {
+    filterEstadoEl.value = '';
+    filterUsuarioEl.value = '';
+    filterFechaEl.value = '';
+    aplicarFiltros(); // Muestra todas las filas
+  }
+</script>
+</body>
+</html>

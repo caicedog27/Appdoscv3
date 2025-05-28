@@ -1,0 +1,183 @@
+<!-- views/VistasProcesoCompras/estados/detalleCompraEnCamino.ejs -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title><%= title %></title>
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+  />
+  <style>
+    .table-readonly td,
+    .table-readonly th {
+      pointer-events: none; /* deshabilita clicks */
+      background-color: #fafafa; /* color clarito */
+    }
+  </style>
+</head>
+<body>
+<div class="container my-4">
+  <h1 class="mb-3"><%= title %></h1>
+
+  <p><strong>ID de Compra:</strong> <%= compraId %></p>
+  <p><strong>Estado General:</strong> EN_CAMINO</p>
+  <p><strong>Progreso:</strong> <%= progress %> %</p>
+
+  <% 
+    // Calcular días que faltan con "compraData.estimatedArrivalDate"
+    let daysLeftMsg = '';
+    if (compraData.estimatedArrivalDate) {
+      const now     = new Date();
+      const arrival = new Date(compraData.estimatedArrivalDate);
+      const diffMs  = arrival - now;
+
+      if (diffMs > 0) {
+        const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+        daysLeftMsg = `Faltan aproximadamente ${daysLeft} día(s) para la llegada.`;
+      } else {
+        daysLeftMsg = 'Ya venció la fecha estimada, o llega hoy.';
+      }
+    } else {
+      daysLeftMsg = 'No se ha especificado una fecha estimada de llegada.';
+    }
+  %>
+  <div class="alert alert-info">
+    <strong>En Camino:</strong>
+    <div><%= daysLeftMsg %></div>
+    <div class="mt-1"><strong>Notas:</strong> <%= compraData.arrivalNotes || '(sin notas)' %></div>
+  </div>
+
+  <!-- Botón para marcar RECIBIDO -->
+  <button class="btn btn-primary mb-3" onclick="marcarRecibido()">
+    Marcar como Recibido
+  </button>
+
+  <!-- Mostrar agrupado por Proveedor (sólo lectura) -->
+  <% 
+    const providerIds = Object.keys(groupedByProvider);
+    let totalGlobal   = 0;
+  %>
+  <div class="accordion" id="accordionProviders">
+    <% providerIds.forEach(pid => {
+       const items = groupedByProvider[pid];
+       const pName = items[0]?.providerName || pid;
+
+       let sumProv = 0;
+    %>
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="heading_<%= pid %>">
+          <button class="accordion-button collapsed" type="button"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#collapse_<%= pid %>"
+                  aria-expanded="false"
+                  aria-controls="collapse_<%= pid %>">
+            <%= pName %> (ID: <%= pid %>) — <%= items.length %> ítem(s)
+          </button>
+        </h2>
+        <div id="collapse_<%= pid %>"
+             class="accordion-collapse collapse"
+             data-bs-parent="#accordionProviders">
+          <div class="accordion-body">
+            <div class="table-responsive">
+              <table class="table table-bordered table-readonly">
+                <thead class="table-light">
+                  <tr>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th>Cant.(g)</th>
+                    <th>$/g</th>
+                    <th>Subtotal</th>
+                    <th>IVA</th>
+                    <th>Ret</th>
+                    <th>Total</th>
+                    <th>No Encontrado?</th>
+                    <th>Notas</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% items.forEach(it => {
+                     const grams     = parseFloat(it.negotiatedQuantity) || 0;
+                     const priceGr   = parseFloat(it.negotiatedPrice) || 0;
+                     const ivaPerc   = parseFloat(it.iva) || 0;
+                     const retPerc   = parseFloat(it.ret) || 0;
+                     const subTotal  = grams * priceGr;
+                     const ivaVal    = subTotal * (ivaPerc / 100);
+                     const retVal    = subTotal * (retPerc / 100);
+                     const finalVal  = subTotal + ivaVal - retVal;
+
+                     sumProv += finalVal;
+                  %>
+                    <tr>
+                      <td><%= it.code %></td>
+                      <td><%= it.name %></td>
+                      <td class="text-end"><%= grams.toFixed(0) %></td>
+                      <td class="text-end"><%= priceGr.toFixed(4) %></td>
+                      <td class="text-end"><%= subTotal.toFixed(2) %></td>
+                      <td class="text-end">
+                        <%= ivaPerc %>% (<%= ivaVal.toFixed(2) %>)
+                      </td>
+                      <td class="text-end">
+                        <%= retPerc %>% (<%= retVal.toFixed(2) %>)
+                      </td>
+                      <td class="text-end"><%= finalVal.toFixed(2) %></td>
+                      <td class="text-center"><%= it.notFound ? 'Sí' : 'No' %></td>
+                      <td><%= it.notes || '' %></td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+            <p class="mt-2 fw-bold">
+              Subtotal Proveedor: $ <%= sumProv.toFixed(2) %>
+            </p>
+          </div>
+        </div>
+      </div>
+      <% totalGlobal += sumProv; %>
+    <% }) %>
+  </div>
+  <hr/>
+  <h4 class="text-end">
+    TOTAL GLOBAL: $ <%= totalGlobal.toFixed(2) %>
+  </h4>
+
+  <hr/>
+  <!-- Adjuntos (documentos) -->
+  <h5>Documentos Subidos:</h5>
+  <% if (compraData.attachments && compraData.attachments.length > 0) { %>
+    <ul>
+      <% compraData.attachments.forEach(att => { %>
+        <li><a href="<%= att.url %>" target="_blank"><%= att.name %></a></li>
+      <% }) %>
+    </ul>
+  <% } else { %>
+    <p class="text-muted">No se han subido documentos.</p>
+  <% } %>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function marcarRecibido() {
+  if (!confirm('¿Confirmar que ya se recibió esta compra?')) return;
+  fetch('/inventarios/popping/procesoCompra/<%= compraId %>/changeMainState', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ newMainState: 'RECIBIDO' })
+  })
+  .then(resp => resp.json())
+  .then(data => {
+    if (!data.success) {
+      alert('Error: ' + data.error);
+    } else {
+      alert('La compra ahora está marcada como RECIBIDO.');
+      window.location.reload();
+    }
+  })
+  .catch(err => {
+    alert('Error: ' + err);
+  });
+}
+</script>
+</body>
+</html>

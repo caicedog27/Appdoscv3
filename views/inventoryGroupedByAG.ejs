@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title><%= title %></title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Bootstrap CSS -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+  <style>
+    /* Overlay de carga */
+    #loadingOverlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.4);
+      color: #fff; 
+      font-size: 1.5rem; 
+      display: none; 
+      align-items: center; 
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    .container {
+      padding: 20px;
+      max-width: 100%;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    /* Acordeón */
+    .group-container {
+      margin-bottom: 20px;
+      border: 1px solid #ced4da;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .group-header {
+      background-color: #e9ecef;
+      cursor: pointer;
+      padding: 10px;
+      font-size: 1.2rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .group-body {
+      display: none; 
+      padding: 10px;
+    }
+
+    .table thead th {
+      background-color: #343a40;
+      color: #fff;
+      white-space: nowrap;
+    }
+
+    /* Panel maestro p/ reordenar grupos */
+    #groupMasterPanel {
+      display: none;
+      margin-bottom: 20px;
+      padding: 15px;
+      background-color: #fff;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    .group-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+      gap: 8px;
+    }
+    .btn-move-up, .btn-move-down {
+      background-color: #6c757d;
+      border: none;
+      color: #fff;
+      padding: 4px 8px;
+      font-size: 0.8rem;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn-move-up:hover, .btn-move-down:hover {
+      background-color: #5a6268;
+    }
+
+    /* Filtros */
+    .filter-controls {
+      margin-bottom: 15px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: center;
+    }
+    .filter-controls input[type="text"],
+    .filter-controls input[type="number"] {
+      max-width: 180px;
+    }
+
+    /* Selección de columnas - Dropdown */
+    .dropdown-menu {
+      padding: 10px;
+    }
+    .colToggleItem {
+      display: flex; 
+      align-items: center;
+      gap: 5px;
+      margin: 3px 0;
+    }
+
+    /* Colores con data-color */
+    table.table-bordered tbody tr[data-color="transparent"] > td {
+      background-color: transparent !important;
+    }
+    table.table-bordered tbody tr[data-color="red"] > td {
+      background-color: #f8d7da !important;
+    }
+    table.table-bordered tbody tr[data-color="yellow"] > td {
+      background-color: #fff3cd !important;
+    }
+    table.table-bordered tbody tr[data-color="green"] > td {
+      background-color: #d4edda !important;
+    }
+    table.table-bordered tbody tr[data-color="blue"] > td {
+      background-color: #cce5ff !important;
+    }
+
+  </style>
+</head>
+<body>
+  <!-- Overlay de carga -->
+  <div id="loadingOverlay">Cargando...</div>
+
+  <div class="container">
+    <h1><%= title %></h1>
+    <div class="d-flex flex-wrap mb-3 gap-2 justify-content-center">
+      <!-- Dropdown Selección de columnas -->
+      <div class="dropdown">
+        <button class="btn btn-secondary dropdown-toggle" 
+                type="button" id="colSelectorBtn" data-bs-toggle="dropdown"
+                aria-expanded="false">
+          Seleccionar columnas
+        </button>
+        <div class="dropdown-menu" aria-labelledby="colSelectorBtn">
+          <div class="colToggleItem">
+            <input type="checkbox" class="form-check-input colToggle" data-key="code" id="toggle_code" checked />
+            <label for="toggle_code">Código</label>
+          </div>
+          <div class="colToggleItem">
+            <input type="checkbox" class="form-check-input colToggle" data-key="name" id="toggle_name" checked />
+            <label for="toggle_name">Nombre</label>
+          </div>
+          <div class="colToggleItem">
+            <input type="checkbox" class="form-check-input colToggle" data-key="stock_control" id="toggle_stock" checked />
+            <label for="toggle_stock">Stock?</label>
+          </div>
+          <div class="colToggleItem">
+            <input type="checkbox" class="form-check-input colToggle" data-key="available_quantity" id="toggle_qty" checked />
+            <label for="toggle_qty">Cant. Disponible</label>
+          </div>
+          <div class="colToggleItem">
+            <input type="checkbox" class="form-check-input colToggle" data-key="idealValue" id="toggle_ideal" checked />
+            <label for="toggle_ideal">Ideal</label>
+          </div>
+          <div class="colToggleItem">
+            <input type="checkbox" class="form-check-input colToggle" data-key="config" id="toggle_config" checked />
+            <label for="toggle_config">Config</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Botón panel reordenar/ocultar grupos -->
+      <button class="btn btn-info" id="toggleGroupMasterBtn">Opciones de Grupos</button>
+    </div>
+
+    <!-- Panel para reordenar/ocultar grupos -->
+    <div id="groupMasterPanel">
+      <h4>Reordenar / Ocultar Grupos</h4>
+      <p>Usa los botones para mover arriba/abajo. Marca/desmarca para ocultar.</p>
+      <div id="groupList"></div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filter-controls">
+      <input type="text" id="searchInput" class="form-control" placeholder="Buscar código/nombre">
+      <input type="number" id="minQtyInput" class="form-control" placeholder="Cant. mínima">
+      <input type="number" id="maxQtyInput" class="form-control" placeholder="Cant. máxima">
+      <button class="btn btn-outline-danger" id="btnOutOfParams">Fuera de Parámetros</button>
+    </div>
+
+    <!-- Grupos en acordeón -->
+    <% const groupNames = Object.keys(grouped); %>
+    <div id="groupContainers">
+      <% groupNames.forEach((groupName, gIdx) => {
+         const items = grouped[groupName];
+      %>
+        <div 
+          class="group-container"
+          data-group-name="<%= groupName %>"
+          id="groupContainer_<%= gIdx %>"
+        >
+          <div class="group-header">
+            <span><%= groupName %></span>
+            <span><strong><%= items.length %> productos</strong></span>
+          </div>
+          <div class="group-body" id="groupBody_<%= gIdx %>">
+            <div class="table-responsive mt-3">
+              <table class="table table-bordered group-table">
+                <thead>
+                  <tr>
+                    <th class="col-code">Código</th>
+                    <th class="col-name">Nombre</th>
+                    <th class="col-stock_control">Stock?</th>
+                    <th class="col-available_quantity">Cant. Disponible</th>
+                    <th class="col-idealValue">Ideal</th>
+                    <th class="col-config">Config</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% items.forEach(prod => {
+                     const qty = prod.available_quantity || 0;
+                  %>
+                    <tr data-color="<%= prod.colorName %>"
+                        data-code="<%= (prod.code || '').toLowerCase() %>"
+                        data-name="<%= (prod.name || '').toLowerCase() %>"
+                        data-qty="<%= qty %>"
+                        data-siigocode="<%= prod.code %>"
+                        data-min="<%= prod.minValue %>"
+                        data-ideal="<%= prod.idealValue %>"
+                        data-max="<%= prod.maxValue %>"
+                    >
+                      <td class="col-code"><%= prod.code %></td>
+                      <td class="col-name"><%= prod.name %></td>
+                      <td class="col-stock_control"><%= prod.stock_control ? 'Sí' : 'No' %></td>
+                      <td class="col-available_quantity"><%= qty %></td>
+                      <td class="col-idealValue"><%= prod.idealValue %></td>
+                      <td class="col-config">
+                        <button class="btn btn-sm btn-warning" 
+                                onclick="openConfigModal(this)">
+                          Config
+                        </button>
+                      </td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+
+    <hr />
+    <p class="text-center">Total global de productos: <%= totalProducts %></p>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal fade" id="configModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Configurar Inventario</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form>
+            <div class="mb-3">
+              <label class="form-label">Código:</label>
+              <input type="text" id="modalCode" class="form-control" readonly />
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Mínimo:</label>
+              <input type="number" id="modalMin" class="form-control" />
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Ideal:</label>
+              <input type="number" id="modalIdeal" class="form-control" />
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Máximo:</label>
+              <input type="number" id="modalMax" class="form-control" />
+            </div>
+            <input type="hidden" id="modalQty" />
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button class="btn btn-primary" onclick="saveConfig()">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script 
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js">
+  </script>
+  <script>
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    function showLoader(msg='Cargando...') {
+      loadingOverlay.innerText = msg;
+      loadingOverlay.style.display = 'flex';
+    }
+    function hideLoader() {
+      loadingOverlay.style.display = 'none';
+    }
+
+    // (A) Acordeón
+    document.querySelectorAll('.group-header').forEach(header => {
+      header.addEventListener('click', () => {
+        const body = header.nextElementSibling;
+        if (!body) return;
+        body.style.display = (body.style.display === 'block') ? 'none' : 'block';
+      });
+    });
+
+    // (B) Panel maestro reordenar/ocultar grupos
+    const toggleGroupMasterBtn = document.getElementById('toggleGroupMasterBtn');
+    const groupMasterPanel     = document.getElementById('groupMasterPanel');
+    const groupContainersEl    = document.getElementById('groupContainers');
+    const groupListEl          = document.getElementById('groupList');
+
+    const allGroupDivs = groupContainersEl.querySelectorAll('.group-container');
+    let groupOrder = [];
+    allGroupDivs.forEach(div => {
+      groupOrder.push(div.dataset.groupName);
+    });
+
+    function renderGroupList() {
+      groupListEl.innerHTML = '';
+      groupOrder.forEach(gName => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'group-item';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = true;
+        checkbox.id = 'groupCheck_' + gName;
+        checkbox.addEventListener('change', () => {
+          toggleGroupVisibility(gName, checkbox.checked);
+        });
+
+        const label = document.createElement('label');
+        label.htmlFor = checkbox.id;
+        label.textContent = gName;
+        label.style.flex = '1';
+
+        const btnUp = document.createElement('button');
+        btnUp.type = 'button';
+        btnUp.className = 'btn-move-up';
+        btnUp.textContent = '↑';
+        btnUp.addEventListener('click', () => moveGroupUp(gName));
+
+        const btnDown = document.createElement('button');
+        btnDown.type = 'button';
+        btnDown.className = 'btn-move-down';
+        btnDown.textContent = '↓';
+        btnDown.addEventListener('click', () => moveGroupDown(gName));
+
+        itemDiv.appendChild(checkbox);
+        itemDiv.appendChild(label);
+        itemDiv.appendChild(btnUp);
+        itemDiv.appendChild(btnDown);
+
+        groupListEl.appendChild(itemDiv);
+      });
+    }
+
+    function toggleGroupVisibility(gName, visible) {
+      const container = [...allGroupDivs].find(d => d.dataset.groupName === gName);
+      if (container) {
+        container.style.display = visible ? '' : 'none';
+      }
+    }
+
+    function moveGroupUp(gName) {
+      const idx = groupOrder.indexOf(gName);
+      if (idx > 0) {
+        [groupOrder[idx - 1], groupOrder[idx]] = [groupOrder[idx], groupOrder[idx - 1]];
+        reorderDOM();
+        renderGroupList();
+      }
+    }
+    function moveGroupDown(gName) {
+      const idx = groupOrder.indexOf(gName);
+      if (idx < groupOrder.length - 1) {
+        [groupOrder[idx], groupOrder[idx + 1]] = [groupOrder[idx + 1], groupOrder[idx]];
+        reorderDOM();
+        renderGroupList();
+      }
+    }
+    function reorderDOM() {
+      groupOrder.forEach(gName => {
+        const container = [...allGroupDivs].find(d => d.dataset.groupName === gName);
+        if (container) {
+          groupContainersEl.appendChild(container);
+        }
+      });
+    }
+
+    toggleGroupMasterBtn.addEventListener('click', () => {
+      groupMasterPanel.style.display = (groupMasterPanel.style.display === 'none') ? 'block' : 'none';
+    });
+    renderGroupList();
+
+    // (C) Selección de columnas
+    document.querySelectorAll('.colToggle').forEach(chk => {
+      chk.addEventListener('change', () => {
+        const key = chk.dataset.key;
+        // Ocultar celdas con clase .col-key
+        document.querySelectorAll('.col-' + key).forEach(td => {
+          td.style.display = chk.checked ? '' : 'none';
+        });
+      });
+    });
+
+    // (D) Filtros
+    const searchInput = document.getElementById('searchInput');
+    const minQtyInput = document.getElementById('minQtyInput');
+    const maxQtyInput = document.getElementById('maxQtyInput');
+    const btnOutOfParams = document.getElementById('btnOutOfParams');
+
+    function applyFilters(outOfParams=false) {
+      const sVal  = (searchInput.value || '').toLowerCase();
+      const minQ  = parseFloat(minQtyInput.value) || Number.MIN_SAFE_INTEGER;
+      const maxQ  = parseFloat(maxQtyInput.value) || Number.MAX_SAFE_INTEGER;
+
+      document.querySelectorAll('.group-table tbody tr').forEach(row => {
+        const code  = row.dataset.code || '';
+        const name  = row.dataset.name || '';
+        const qty   = parseFloat(row.dataset.qty) || 0;
+        const color = row.dataset.color || 'transparent';
+
+        // Texto
+        const matchText = (code.includes(sVal) || name.includes(sVal));
+        // Rango
+        const matchQty = (qty >= minQ && qty <= maxQ);
+        // Fuera de parámetros => color != green, != transparent
+        let matchColor = true;
+        if (outOfParams) {
+          if (color === 'green' || color === 'transparent') {
+            matchColor = false;
+          }
+        }
+
+        row.style.display = (matchText && matchQty && matchColor) ? '' : 'none';
+      });
+    }
+
+    searchInput.addEventListener('input', () => applyFilters());
+    minQtyInput.addEventListener('input', () => applyFilters());
+    maxQtyInput.addEventListener('input', () => applyFilters());
+    btnOutOfParams.addEventListener('click', () => {
+      applyFilters(true);
+    });
+
+    // (E) Modal Config
+    const configModal = new bootstrap.Modal(document.getElementById('configModal'));
+    let currentRow = null;
+
+    function openConfigModal(btn) {
+      const tr = btn.closest('tr');
+      if (!tr) return;
+
+      currentRow = tr; // guardamos la fila en una variable global
+      const code  = tr.dataset.siigocode || '';
+      const min   = tr.dataset.min || '0';
+      const ideal = tr.dataset.ideal || '0';
+      const max   = tr.dataset.max || '0';
+      const qty   = tr.dataset.qty || '0';
+
+      document.getElementById('modalCode').value   = code;
+      document.getElementById('modalMin').value    = min;
+      document.getElementById('modalIdeal').value  = ideal;
+      document.getElementById('modalMax').value    = max;
+      document.getElementById('modalQty').value    = qty;
+
+      configModal.show();
+    }
+
+    async function saveConfig() {
+      const code  = document.getElementById('modalCode').value;
+      const min   = document.getElementById('modalMin').value;
+      const ideal = document.getElementById('modalIdeal').value;
+      const max   = document.getElementById('modalMax').value;
+      const qty   = document.getElementById('modalQty').value;
+
+      if (!code) {
+        alert('Código inválido');
+        return;
+      }
+      try {
+        showLoader('Guardando...');
+        const resp = await fetch('/inventarios/materiaPrima/popping/updateInventoryConfig', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, min, ideal, max, qty })
+        });
+        const data = await resp.json();
+        hideLoader();
+
+        if (data.success) {
+          alert('Configuración guardada');
+          configModal.hide();
+
+          // Actualizar color de la fila
+          if (currentRow && data.newColor) {
+            currentRow.dataset.color = data.newColor;
+          }
+          applyFilters(); // re-aplicar los filtros
+        } else {
+          alert('Error: ' + (data.error || ''));
+        }
+      } catch (err) {
+        hideLoader();
+        alert('Error guardando la config\n' + err);
+      }
+    }
+  </script>
+</body>
+</html>

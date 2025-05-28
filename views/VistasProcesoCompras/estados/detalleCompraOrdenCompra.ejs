@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title><%= title %></title>
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+/>
+</head>
+<body>
+<div class="container my-4">
+  <h1 class="mb-3"><%= title %></h1>
+
+  <p><strong>ID de Compra:</strong> <%= compraId %></p>
+  <p><strong>Estado General:</strong> ORDEN_COMPRA</p>
+  <p><strong>Progreso:</strong> <%= progress %>%</p>
+
+  <% const purchaseNo = compraData.purchaseOrderNumber || 'PENDIENTE'; %>
+  <p><strong>Número de Orden:</strong> <%= purchaseNo %></p>
+
+  <div class="alert alert-success">
+    <p>
+      Esta es la Orden de Compra oficial. Cada proveedor puede tener datos de llegada y pago distintos.  
+      Completa la <strong>fecha de llegada</strong>, <strong>plazo</strong> y <strong>forma de pago</strong> para cada uno,  
+      y sube un <strong>soporte</strong> si lo requieres.
+    </p>
+    <p>
+      Posteriormente, puedes descargar los PDFs o pasar la Orden a <strong>EN_CAMINO</strong>.
+    </p>
+  </div>
+
+  <!-- Botón => Generar/Descargar PDF ORDEN (Global) -->
+  <button class="btn btn-info mb-3"
+          onclick="descargarOrdenGlobal()">
+    Descargar Orden de Compra (PDF Global)
+  </button>
+
+  <!-- Descargar PDF por Proveedor -->
+  <div class="mb-3">
+    <h5>Descargar Orden de Compra por Proveedor:</h5>
+    <% const providerIds = Object.keys(groupedByProvider); %>
+    <% providerIds.forEach(pid => {
+       const pName = groupedByProvider[pid][0]?.providerName || pid;
+    %>
+      <button class="btn btn-secondary mb-2"
+              onclick="descargarOrdenPorProveedor('<%= pid %>')">
+        <%= pName %> (ID: <%= pid %>)
+      </button><br/>
+    <% }) %>
+  </div>
+
+  <!-- Cada Proveedor en acordeón -->
+  <% let totalGlobal = 0; %>
+  <div class="accordion" id="accordionProviders">
+    <% providerIds.forEach(pid => {
+       const items = groupedByProvider[pid];
+       const pName = items[0]?.providerName || pid;
+       let sumProv = 0;
+    %>
+      <div class="accordion-item">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed" type="button"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#collapse_<%= pid %>">
+            <%= pName %> (ID: <%= pid %>) - <%= items.length %> ítems
+          </button>
+        </h2>
+        <div id="collapse_<%= pid %>" class="accordion-collapse collapse"
+             data-bs-parent="#accordionProviders">
+          <div class="accordion-body">
+            <!-- TABLA DE ÍTEMS -->
+            <div class="table-responsive mb-3">
+              <table class="table table-bordered align-middle">
+                <thead class="table-light">
+                  <tr>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th>Cant(g)</th>
+                    <th>$/g</th>
+                    <th>Subtotal</th>
+                    <th>IVA</th>
+                    <th>Ret</th>
+                    <th>Total</th>
+                    <th>No Encontrado?</th>
+                    <th>Notas</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% items.forEach(it => {
+                     const grams   = parseFloat(it.negotiatedQuantity)||0;
+                     const priceGr = parseFloat(it.negotiatedPrice)||0;
+                     const ivaPerc = parseFloat(it.iva)||0;
+                     const retPerc = parseFloat(it.ret)||0;
+                     const subTotal= grams * priceGr;
+                     const ivaVal  = subTotal * (ivaPerc/100);
+                     const retVal  = subTotal * (retPerc/100);
+                     const finalVal= subTotal + ivaVal - retVal;
+                     sumProv += finalVal;
+                  %>
+                    <tr>
+                      <td><%= it.code %></td>
+                      <td><%= it.name %></td>
+                      <td><%= grams.toFixed(0) %></td>
+                      <td><%= priceGr.toFixed(4) %></td>
+                      <td><%= subTotal.toFixed(2) %></td>
+                      <td><%= ivaPerc %>% (<%= ivaVal.toFixed(2) %>)</td>
+                      <td><%= retPerc %>% (<%= retVal.toFixed(2) %>)</td>
+                      <td><%= finalVal.toFixed(2) %></td>
+                      <td><%= it.notFound ? 'Sí' : 'No' %></td>
+                      <td><%= it.notes || '' %></td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+              <p class="fw-bold">Subtotal Proveedor: $ <%= sumProv.toFixed(2) %></p>
+            </div>
+            <% totalGlobal += sumProv; %>
+
+            <!-- FORMULARIO Para datos de llegada/pago de ESTE Proveedor -->
+            <form class="mb-3"
+                  onsubmit="return saveArrivalByProvider(event, this, '<%= pid %>')"
+                  enctype="multipart/form-data">
+              <h5>Datos Adicionales para <%= pName %></h5>
+              <div class="row">
+                <div class="col-md-4 mb-2">
+                  <label class="form-label">Fecha de Llegada:</label>
+                  <input type="date" name="arrivalDate" class="form-control" />
+                </div>
+                <div class="col-md-4 mb-2">
+                  <label class="form-label">Plazo (días):</label>
+                  <input type="number" name="plazo" class="form-control" placeholder="Ej: 10" />
+                </div>
+                <div class="col-md-4 mb-2">
+                  <label class="form-label">Forma de Pago:</label>
+                  <select name="pago" class="form-select">
+                    <option value="Transferencia">Transferencia</option>
+                    <option value="Efectivo">Efectivo</option>
+                    <option value="Tarjeta">Tarjeta</option>
+                    <option value="Crédito">Crédito</option>
+                  </select>
+                </div>
+              </div>
+              <div class="mb-2">
+                <label class="form-label">Notas / Observaciones:</label>
+                <textarea name="notes" class="form-control"></textarea>
+              </div>
+              <div class="mb-2">
+                <label class="form-label">Soporte de Pago (Archivo):</label>
+                <input type="file" name="soportePago" class="form-control" />
+              </div>
+              <button class="btn btn-primary" type="submit">
+                Guardar Datos de <%= pName %>
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+
+  <hr/>
+  <h4 class="text-end">TOTAL GLOBAL: $ <%= totalGlobal.toFixed(2) %></h4>
+
+  <hr />
+  <h4>Documentos Globales Subidos</h4>
+  <% if (compraData.attachments && compraData.attachments.length > 0) { %>
+    <ul>
+      <% compraData.attachments.forEach(a => { %>
+        <li><a href="<%= a.url %>" target="_blank"><%= a.name %></a></li>
+      <% }) %>
+    </ul>
+  <% } else { %>
+    <p class="text-muted">No hay documentos subidos.</p>
+  <% } %>
+
+  <!-- Botón => Pasar la Orden completa a "EN_CAMINO" -->
+  <button class="btn btn-success mt-3" onclick="moveToEnCamino()">
+    Finalizar y Pasar a EN_CAMINO
+  </button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+/** Descargar PDF global */
+function descargarOrdenGlobal() {
+  window.open('/inventarios/popping/procesoCompra/<%= compraId %>/ordenCompraPdf','_blank');
+}
+/** Descargar PDF sólo de un proveedor */
+function descargarOrdenPorProveedor(pid) {
+  window.open('/inventarios/popping/procesoCompra/<%= compraId %>/ordenCompraPdf/' + pid, '_blank');
+}
+
+/** Guardar datos de llegada/pago para ESTE proveedor => POST multipart */
+async function saveArrivalByProvider(e, formEl, providerId) {
+  e.preventDefault();
+  const fd = new FormData(formEl);
+
+  // Endpoint => /popping/procesoCompra/:docId/setArrivalByProvider/:providerId
+  const url = `/inventarios/popping/procesoCompra/<%= compraId %>/setArrivalByProvider/${providerId}`;
+  try {
+    const resp = await fetch(url, {
+      method: 'POST',
+      body: fd // incluye arrivalDate, plazo, pago, notes, soportePago
+    });
+    const data = await resp.json();
+    if (!data.success) {
+      alert('Error: ' + (data.error || 'Desconocido'));
+    } else {
+      alert('Datos guardados para el proveedor ' + providerId);
+    }
+  } catch(err) {
+    alert('Error: ' + err);
+  }
+  return false;
+}
+
+/** Pasar la Orden COMPLETA a EN_CAMINO */
+async function moveToEnCamino() {
+  if (!confirm('¿Marcar la Orden como EN_CAMINO?')) return;
+  try {
+    const resp = await fetch('/inventarios/popping/procesoCompra/<%= compraId %>/changeMainState', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newMainState: 'EN_CAMINO' })
+    });
+    const data = await resp.json();
+    if (!data.success) {
+      alert('Error: ' + data.error);
+    } else {
+      alert('La Orden ahora está EN_CAMINO');
+      window.location.reload();
+    }
+  } catch(err) {
+    alert('Error: ' + err);
+  }
+}
+</script>
+</body>
+</html>

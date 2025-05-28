@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title><%= title %></title>
+
+  <!-- Bootstrap CSS -->
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+  />
+  <style>
+    /* Animación simple de aparición */
+    .fade-in {
+      animation: fadeIn 0.4s ease forwards;
+      opacity: 0;
+    }
+    @keyframes fadeIn {
+      to {
+        opacity: 1;
+      }
+    }
+
+    .saved-badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background-color: #d4edda;
+      color: #155724;
+    }
+    .unsaved-badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container my-4 fade-in">
+  <h1 class="mb-3"><%= title %></h1>
+
+  <p><strong>ID de Compra:</strong> <%= compraId %></p>
+  <p><strong>Estado General:</strong> NEGOCIACION</p>
+  <p><strong>Progreso:</strong> <%= progress %> %</p>
+
+  <div class="alert alert-warning">
+    <strong>Negociación:</strong> Ajusta cantidades, precios, IVA, retenciones.<br />
+    Usa la calculadora para convertir bultos/kg/libras en gramos y coste por gramo.
+  </div>
+
+  <!-- Botones PDF y cambio de estado -->
+  <button class="btn btn-success mb-2"
+          onclick="window.open('/inventarios/popping/procesoCompra/<%= compraId %>/pdfListaInicial','_blank')">
+    Descargar Lista Inicial (PDF)
+  </button>
+
+  <button class="btn btn-primary mb-2 ms-2"
+          onclick="abrirModalAprobacion()">
+    Ir a Aprobación
+  </button>
+
+  <!-- Acordeón por Proveedor -->
+  <% const providerIds = Object.keys(groupedByProvider); %>
+  <% providerIds.forEach(pid => {
+     const items = groupedByProvider[pid];
+     const pName = items[0]?.providerName || pid;
+  %>
+    <div class="card mb-2">
+      <div class="card-header bg-light">
+        <button class="btn btn-link text-decoration-none" type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#collapse_<%= pid %>">
+          <strong><%= pName %></strong> (ID: <%= pid %>) - <%= items.length %> ítem(s)
+        </button>
+      </div>
+      <div id="collapse_<%= pid %>" class="collapse">
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>Código</th>
+                  <th>Nombre</th>
+                  <th class="text-end">Solicitado</th>
+                  <th class="text-end">(g)Negociado</th>
+                  <th class="text-end">$/g (COP)</th>
+                  <th class="text-end">IVA (%)</th>
+                  <th class="text-end">Ret (%)</th>
+                  <!-- Calculamos Subtotal y Total con impuestos -->
+                  <th class="text-end">Subtotal (COP)</th>
+                  <th class="text-end">Total (COP)</th>
+
+                  <th>No Encontrado?</th>
+                  <th>Estado</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% items.forEach((it, index) => {
+                   const rowId = pid+'_'+index;
+
+                   // Para indicar si ya fue guardado
+                   const savedFlag = (it._saved ? true : false);
+
+                   // Lecturas de firestore (o 0 por defecto):
+                   const requestedQ    = parseFloat(it.quantityToBuy || 0);
+                   const negotiatedQ   = parseFloat(it.negotiatedQuantity || 0);
+                   const negotiatedP   = parseFloat(it.negotiatedPrice || 0);
+                   const myIva         = parseFloat(it.iva || 0);
+                   const myRet         = parseFloat(it.ret || 0);
+
+                   // Subtotal
+                   const subT  = negotiatedQ * negotiatedP;
+                   // IVA
+                   const ivaVal = subT * (myIva/100);
+                   // Ret
+                   const retVal = subT * (myRet/100);
+                   // Total final
+                   const finalVal = subT + ivaVal - retVal;
+                %>
+                  <tr id="row_<%= rowId %>">
+                    <td><%= it.code %></td>
+                    <td><%= it.name %></td>
+                    <td class="text-end"><%= requestedQ.toLocaleString('es-CO') %></td>
+                    <td class="text-end"><%= negotiatedQ.toLocaleString('es-CO') %></td>
+                    <td class="text-end"><%= negotiatedP.toFixed(2) %></td>
+                    <td class="text-end"><%= myIva %></td>
+                    <td class="text-end"><%= myRet %></td>
+                    <!-- Muestra Subtotal y Total -->
+                    <td class="text-end"><%= subT.toFixed(2) %></td>
+                    <td class="text-end"><%= finalVal.toFixed(2) %></td>
+
+                    <td class="text-center">
+                      <%= it.notFound ? 'Sí' : 'No' %>
+                    </td>
+                    <td>
+                      <% if (savedFlag) { %>
+                        <span class="saved-badge">Guardado</span>
+                      <% } else { %>
+                        <span class="unsaved-badge">No guardado</span>
+                      <% } %>
+                    </td>
+                    <td>
+                      <button class="btn btn-info btn-sm"
+                              onclick="openEditModal(<%= JSON.stringify(it) %>)">
+                        Editar
+                      </button>
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div> <!-- table-responsive -->
+        </div>
+      </div>
+    </div>
+  <% }) %>
+
+  <hr />
+  <h4>Subir Documentos</h4>
+  <form action="/inventarios/popping/procesoCompra/<%= compraId %>/adjuntar"
+        method="post"
+        enctype="multipart/form-data">
+    <div class="mb-2">
+      <input type="file" name="file" class="form-control" />
+    </div>
+    <button class="btn btn-primary" type="submit">Subir</button>
+  </form>
+  <% if (compraData.attachments && compraData.attachments.length>0) { %>
+    <h6 class="mt-3">Documentos Subidos:</h6>
+    <ul>
+      <% compraData.attachments.forEach(a => { %>
+        <li><a href="<%= a.url %>" target="_blank"><%= a.name %></a></li>
+      <% }) %>
+    </ul>
+  <% } %>
+</div>
+
+<!-- MODAL: Editar Ítem -->
+<div class="modal fade" id="editModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form onsubmit="return saveItem(event, this)">
+        <div class="modal-header">
+          <h5 class="modal-title">Editar Ítem</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <!-- hidden -->
+          <input type="hidden" id="m_code" name="code" />
+          <input type="hidden" id="m_providerId" name="providerId" />
+
+          <div class="mb-2">
+            <label class="form-label fw-bold">Producto:</label>
+            <input type="text" id="m_name" class="form-control" readonly />
+          </div>
+          <div class="mb-2">
+            <label>Solicitado:</label>
+            <input type="number" id="m_requested" class="form-control" readonly />
+          </div>
+          <hr/>
+          <div class="row">
+            <div class="col-6 mb-2">
+              <label>Cantidad Negociada (g):</label>
+              <input type="number" id="m_qty" class="form-control" />
+            </div>
+            <div class="col-6 mb-2">
+              <label>Precio (COP/g):</label>
+              <input type="number" step="0.0001" id="m_price" class="form-control" />
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-6 mb-2">
+              <label>IVA (%):</label>
+              <select id="m_iva" class="form-select">
+                <option value="0">0%</option>
+                <option value="5">5%</option>
+                <option value="19">19%</option>
+              </select>
+            </div>
+            <div class="col-6 mb-2">
+              <label>Retención (%):</label>
+              <select id="m_ret" class="form-select">
+                <option value="0">0%</option>
+                <option value="2.5">2.5%</option>
+                <option value="3.5">3.5%</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-check form-switch mb-2">
+            <input type="checkbox" class="form-check-input" id="m_notFound" />
+            <label class="form-check-label" for="m_notFound">No Encontrado?</label>
+          </div>
+          <div class="mb-2">
+            <label>Notas:</label>
+            <textarea id="m_notes" class="form-control" rows="2"></textarea>
+          </div>
+          <!-- Botón para abrir calculadora -->
+          <button type="button" class="btn btn-sm btn-info" onclick="openCalcModal()">
+            Calculadora
+          </button>
+          <div id="modalErrorMsg" class="text-danger mt-2" style="display:none;"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">
+            Cancelar
+          </button>
+          <button class="btn btn-primary" type="submit" id="btnSaveModal">
+            Guardar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Calculadora -->
+<div class="modal fade" id="calcModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Calculadora Bultos/Kg/Libras</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2">
+          <label>Presentación:</label>
+          <select class="form-select" id="calc_presentacion">
+            <option value="bulto25">Bulto 25kg</option>
+            <option value="bulto10">Bulto 10kg</option>
+            <option value="kilo">Kilo (1000g)</option>
+            <option value="libra">Libra (~453.59g)</option>
+          </select>
+        </div>
+        <div class="mb-2">
+          <label># de bultos/unidades:</label>
+          <input type="number" id="calc_n" class="form-control" placeholder="Ej: 2" />
+        </div>
+        <div class="mb-2">
+          <label>Precio por bulto/unidad (COP):</label>
+          <input type="number" step="0.01" id="calc_priceUnit" class="form-control" />
+        </div>
+        <hr />
+        <div class="alert alert-secondary" id="calcResult">
+          <strong>Resultado:</strong><br />
+          Total (g): 0<br />
+          Precio / gr: 0<br />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="calcCompute()">Calcular</button>
+        <button class="btn btn-primary" onclick="calcApply()">Aplicar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Confirmar Aprobación -->
+<div class="modal fade" id="aprobModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form onsubmit="return doAprobarCompra(event, this)">
+        <div class="modal-header">
+          <h5 class="modal-title">Confirmar Aprobación</h5>
+          <button class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted">
+            Verifica valores negociados. ¿Pasar a "APROBACION"?
+          </p>
+          <input type="hidden" name="newMainState" value="APROBACION" />
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">
+            Cancelar
+          </button>
+          <button class="btn btn-success" type="submit">
+            Aprobar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script
+  src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js">
+</script>
+<script>
+let editModal   = new bootstrap.Modal(document.getElementById('editModal'));
+let calcModal   = new bootstrap.Modal(document.getElementById('calcModal'));
+let aprobModal  = new bootstrap.Modal(document.getElementById('aprobModal'));
+
+let currentItemData = null;
+
+/** Abre modal de edición */
+function openEditModal(item) {
+  currentItemData = item;
+  document.getElementById('m_code').value       = item.code || '';
+  document.getElementById('m_providerId').value = item.providerId || '';
+  document.getElementById('m_name').value       = item.name || '';
+  document.getElementById('m_requested').value  = item.quantityToBuy || 0;
+
+  document.getElementById('m_qty').value   = item.negotiatedQuantity || 0;
+  document.getElementById('m_price').value = item.negotiatedPrice || 0;
+  document.getElementById('m_iva').value   = item.iva || 0;
+  document.getElementById('m_ret').value   = item.ret || 0;
+  document.getElementById('m_notFound').checked = !!item.notFound;
+  document.getElementById('m_notes').value = item.notes || '';
+
+  document.getElementById('modalErrorMsg').style.display = 'none';
+  document.getElementById('btnSaveModal').disabled = false;
+
+  editModal.show();
+}
+
+/** Manejamos validaciones (por ejemplo) */
+function validateModal() {
+  const notFound = document.getElementById('m_notFound').checked;
+  const qtyVal   = parseFloat(document.getElementById('m_qty').value)||0;
+  const priceVal = parseFloat(document.getElementById('m_price').value)||0;
+
+  let errMsg = '';
+  if(!notFound) {
+    if(qtyVal <= 0) {
+      errMsg = 'La cantidad negociada debe ser > 0 si no está marcado "No Encontrado".';
+    } else if(priceVal <= 0) {
+      errMsg = 'El precio debe ser > 0 si no está marcado "No Encontrado".';
+    }
+  }
+
+  const msgDiv = document.getElementById('modalErrorMsg');
+  if(errMsg) {
+    msgDiv.innerText = errMsg;
+    msgDiv.style.display = 'block';
+    document.getElementById('btnSaveModal').disabled = true;
+  } else {
+    msgDiv.style.display = 'none';
+    document.getElementById('btnSaveModal').disabled = false;
+  }
+}
+
+async function saveItem(e, formEl) {
+  e.preventDefault();
+  // Recolectar
+  const code = document.getElementById('m_code').value;
+  const providerId = document.getElementById('m_providerId').value;
+  const negotiatedQuantity = parseFloat(document.getElementById('m_qty').value)||0;
+  const negotiatedPrice    = parseFloat(document.getElementById('m_price').value)||0;
+  const iva                = parseFloat(document.getElementById('m_iva').value)||0;
+  const ret                = parseFloat(document.getElementById('m_ret').value)||0;
+  const notFound           = document.getElementById('m_notFound').checked;
+  const notes              = document.getElementById('m_notes').value||'';
+
+  // Body
+  const bodyData = {
+    code,
+    providerId,
+    negotiatedQuantity,
+    negotiatedPrice,
+    iva,
+    ret,
+    notFound,
+    notes
+  };
+
+  try {
+    const resp = await fetch('/inventarios/popping/procesoCompra/<%= compraId %>/actualizarItem', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify(bodyData)
+    });
+    const data = await resp.json();
+    if(!data.success) {
+      alert('Error: '+ (data.error||'Desconocido'));
+    } else {
+      alert('Ítem guardado correctamente');
+      editModal.hide();
+      window.location.reload();
+    }
+  } catch(err) {
+    alert('Error: '+ err);
+  }
+  return false;
+}
+
+/** Abre el modal de calculadora */
+function openCalcModal() {
+  document.getElementById('calc_presentacion').value = 'bulto25';
+  document.getElementById('calc_n').value = '';
+  document.getElementById('calc_priceUnit').value = '';
+  document.getElementById('calcResult').innerHTML = `
+    <strong>Resultado:</strong><br/>
+    Total (g): 0<br/>
+    Precio / gr: 0<br/>
+  `;
+  calcModal.show();
+}
+
+/** Calcular en la calculadora */
+function calcCompute() {
+  const present = document.getElementById('calc_presentacion').value;
+  const nVal    = parseFloat(document.getElementById('calc_n').value)||0;
+  const pUnit   = parseFloat(document.getElementById('calc_priceUnit').value)||0;
+
+  let gramsOne=0;
+  switch(present){
+    case 'bulto25': gramsOne=25000; break;
+    case 'bulto10': gramsOne=10000; break;
+    case 'kilo':    gramsOne=1000;  break;
+    case 'libra':   gramsOne=453.592; break;
+  }
+  const totalGrams = gramsOne*nVal;
+  const subTotal   = pUnit*nVal;
+  let priceGram=0;
+  if(totalGrams>0) {
+    priceGram = subTotal/totalGrams;
+  }
+  document.getElementById('calcResult').innerHTML = `
+    <strong>Resultado:</strong><br/>
+    Total (g): ${totalGrams.toFixed(0)}<br/>
+    Precio / gr: ${priceGram.toFixed(4)}<br/>
+  `;
+}
+
+/** Aplicar en la calculadora => asigna a los campos del modal principal */
+function calcApply() {
+  const present = document.getElementById('calc_presentacion').value;
+  const nVal    = parseFloat(document.getElementById('calc_n').value)||0;
+  const pUnit   = parseFloat(document.getElementById('calc_priceUnit').value)||0;
+
+  let gramsOne=0;
+  switch(present){
+    case 'bulto25': gramsOne=25000; break;
+    case 'bulto10': gramsOne=10000; break;
+    case 'kilo':    gramsOne=1000;  break;
+    case 'libra':   gramsOne=453.592; break;
+  }
+  const totalGrams= gramsOne*nVal;
+  const subTotal= pUnit*nVal;
+  let priceGram=0;
+  if(totalGrams>0){
+    priceGram= subTotal/totalGrams;
+  }
+  // Asigna en la modal de edición
+  document.getElementById('m_qty').value   = totalGrams.toFixed(0);
+  document.getElementById('m_price').value = priceGram.toFixed(4);
+
+  calcModal.hide();
+}
+
+/** Modal Aprobación */
+function abrirModalAprobacion() {
+  aprobModal.show();
+}
+
+/** Confirmar Aprobación => pasa a APROBACION */
+async function doAprobarCompra(e, formEl) {
+  e.preventDefault();
+  const fd = new FormData(formEl);
+  const newMainState = fd.get('newMainState') || 'APROBACION';
+
+  try {
+    const r = await fetch('/inventarios/popping/procesoCompra/<%= compraId %>/changeMainState', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({ newMainState })
+    });
+    const d = await r.json();
+    if(!d.success){
+      alert('Error: '+ d.error);
+    } else {
+      alert('Compra -> APROBACION');
+      window.location.reload();
+    }
+  } catch(err){
+    alert('Error: '+ err);
+  }
+  return false;
+}
+</script>
+
+</body>
+</html>

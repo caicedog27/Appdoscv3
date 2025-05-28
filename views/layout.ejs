@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title %></title>
+
+  <!-- Boxicons -->
+  <link href="https://unpkg.com/boxicons@2.1.1/css/boxicons.min.css" rel="stylesheet" />
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+
+  <!-- Estilos generales (inline) -->
+  <style>
+    /* ——— RESET & BASE ——— */
+    *{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+    html,body{width:100%;height:100%;overflow-x:hidden;background-color:#f1f1f1;}
+
+    /* ——— SIDEBAR ——— */
+    .sidebar{position:fixed;top:0;left:0;width:250px;height:100%;background:#1d1b31;color:#fff;transition:width .3s;overflow:hidden;z-index:999;}
+    .sidebar.collapsed{width:80px;}
+    .sidebar header{display:flex;align-items:center;justify-content:space-between;background:#11101d;padding:15px 20px;}
+    .logo-container{display:flex;align-items:center;gap:10px;}
+    .logo{font-size:24px;font-weight:bold;}
+    .logo-text{font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .3s;}
+    .sidebar.collapsed .logo-text{opacity:0;width:0;}
+    .toggle-btn{font-size:20px;cursor:pointer;transition:transform .3s;}
+    .sidebar.collapsed .toggle-btn{transform:rotate(180deg);}
+    .menu-links{list-style:none;padding:0;margin:10px 0 0;}
+    .nav-item{position:relative;margin-bottom:5px;}
+    .nav-item a{display:flex;align-items:center;gap:10px;text-decoration:none;color:#fff;padding:10px 20px;border-radius:8px;transition:background .3s;}
+    .nav-item a:hover{background:#27293d;}
+    .icon{font-size:20px;min-width:20px;text-align:center;}
+    .sidebar.collapsed .text{display:none;}
+    .sidebar.collapsed .nav-item a::after{content:attr(title);position:absolute;left:calc(100% + 10px);top:50%;transform:translateY(-50%);background:#27293d;color:#fff;padding:8px 12px;border-radius:6px;box-shadow:0 4px 8px rgba(0,0,0,.1);font-size:14px;pointer-events:none;opacity:0;transition:opacity .3s,transform .3s;}
+    .sidebar.collapsed .nav-item a:hover::after{opacity:1;transform:translateY(-50%) translateX(0);}
+    .submenu-container{cursor:pointer;}
+    .submenu{list-style:none;padding-left:40px;display:none;}
+    .submenu li a{padding:8px 0;border-radius:6px;}
+    .submenu li a:hover{background:#27293d;}
+    .submenu-container.open .submenu{display:block;}
+    .arrow{margin-left:auto;transition:transform .3s;}
+    .submenu-container.open .arrow{transform:rotate(180deg);}
+    .bottom-content{position:absolute;bottom:10px;width:100%;list-style:none;padding:0;}
+    .bottom-content li{margin-bottom:5px;}
+    .bottom-content li a{display:flex;align-items:center;gap:10px;text-decoration:none;color:#fff;padding:10px 20px;border-radius:8px;transition:background .3s;}
+    .bottom-content li a:hover{background:#27293d;}
+
+    /* ——— MAIN CONTENT ——— */
+    .main-content{margin-left:250px;padding:20px;min-height:100vh;transition:margin-left .3s;background:#f1f1f1;}
+    .sidebar.collapsed ~ .main-content{margin-left:80px;}
+
+    /* ——— LOADER ——— */
+    .page-loader{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,.8);display:flex;align-items:center;justify-content:center;z-index:2000;}
+    .page-loader.hidden{display:none;}
+    .page-loader .spinner{width:3rem;height:3rem;border:.5rem solid #ccc;border-top-color:#333;border-radius:50%;animation:spin 1s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+  </style>
+</head>
+
+<body>
+  <!-- Loader global -->
+  <div id="pageLoader" class="page-loader"><div class="spinner"></div></div>
+
+  <!-- ─── SIDEBAR ─────────────────────────────────────────────────── -->
+  <nav class="sidebar" id="sidebar">
+    <header>
+      <div class="logo-container">
+        <span class="logo">M</span>
+        <span class="logo-text">AppDocs</span>
+      </div>
+      <i class="bx bx-chevron-right toggle-btn" id="toggle-btn"></i>
+    </header>
+
+    <!-- Menú principal -->
+    <ul class="menu-links">
+      <li class="nav-item" title="Dashboard">
+        <a href="/"><i class="bx bx-home-alt icon"></i><span class="text">Dashboard</span></a>
+      </li>
+
+      <!-- Inventarios -->
+      <li class="nav-item submenu-container" title="Inventarios">
+        <a href="#" class="submenu-toggle">
+          <i class="bx bx-box icon"></i><span class="text">Inventarios</span><i class="bx bx-chevron-down arrow"></i>
+        </a>
+        <ul class="submenu">
+          <li class="nav-item" title="Perlas"><a href="/inventarios/producto/Perlas"><i class="bx bx-package icon"></i><span class="text">Perlas</span></a></li>
+          <li class="nav-item" title="Popping"><a href="/inventarios/producto/popping"><i class="bx bx-package icon"></i><span class="text">Popping</span></a></li>
+          <li class="nav-item" title="Flavor"><a href="/inventarios/producto/flavor"><i class="bx bx-package icon"></i><span class="text">Flavor</span></a></li>
+          <li class="nav-item" title="Conteo"><a href="/inventarios/producto/total/Perlas"><i class="bx bx-calculator icon"></i><span class="text">Conteo de Inventario</span></a></li>
+        </ul>
+      </li>
+
+      <!-- Compras -->
+      <li class="nav-item submenu-container" title="Compras">
+        <a href="#" class="submenu-toggle">
+          <i class="bx bx-shopping-bag icon"></i><span class="text">Compras</span><i class="bx bx-chevron-down arrow"></i>
+        </a>
+        <ul class="submenu">
+          <li class="nav-item" title="Crear Orden de Compra"><a href="/purchase/new"><i class="bx bx-receipt icon"></i><span class="text">Crear Orden de Compra</span></a></li>
+        </ul>
+      </li>
+
+      <!-- Lista de Compras -->
+      <li class="nav-item submenu-container" title="Materia Prima">
+        <a href="#" class="submenu-toggle">
+          <i class="bx bx-layer icon"></i><span class="text">Lista de Compras</span><i class="bx bx-chevron-down arrow"></i>
+        </a>
+        <ul class="submenu">
+          <li class="nav-item" title="Lista Cp Popping"><a href="/inventarios/popping/procesoCompra"><i class="bx bx-package icon"></i><span class="text">Lista Cp Popping</span></a></li>
+          <li class="nav-item" title="MP Flavor"><a href="/inventarios/materiaPrima/flavor"><i class="bx bx-package icon"></i><span class="text">MP Flavor</span></a></li>
+          <li class="nav-item" title="MP Perlas"><a href="/inventarios/materiaPrima/perlas"><i class="bx bx-package icon"></i><span class="text">MP Perlas</span></a></li>
+        </ul>
+      </li>
+
+      <!-- Inventario por Grupos -->
+      <li class="nav-item submenu-container" title="Materia Prima">
+        <a href="#" class="submenu-toggle">
+          <i class="bx bx-layer icon"></i><span class="text">Inv. Por Grupos</span><i class="bx bx-chevron-down arrow"></i>
+        </a>
+        <ul class="submenu">
+          <li class="nav-item" title="MP Popping"><a href="/inventarios/materiaPrima/popping"><i class="bx bx-package icon"></i><span class="text">MP Popping</span></a></li>
+          <li class="nav-item" title="MP Flavor"><a href="/inventarios/materiaPrima/flavor"><i class="bx bx-package icon"></i><span class="text">MP Flavor</span></a></li>
+          <li class="nav-item" title="MP Perlas"><a href="/inventarios/materiaPrima/perlas"><i class="bx bx-package icon"></i><span class="text">MP Perlas</span></a></li>
+        </ul>
+      </li>
+
+      <!-- Pedidos Materia Prima -->
+      <li class="nav-item submenu-container" title="Materia Prima">
+        <a href="#" class="submenu-toggle">
+          <i class="bx bx-layer icon"></i><span class="text">Pedidos Materia Prima</span><i class="bx bx-chevron-down arrow"></i>
+        </a>
+        <ul class="submenu">
+          <li class="nav-item" title="MP Popping"><a href="/inventarios/materiaPrima/popping/listaCompras"><i class="bx bx-package icon"></i><span class="text">MP Popping</span></a></li>
+          <li class="nav-item" title="MP Flavor"><a href="/inventarios/materiaPrima/flavor"><i class="bx bx-package icon"></i><span class="text">MP Flavor</span></a></li>
+          <li class="nav-item" title="MP Perlas"><a href="/inventarios/materiaPrima/perlas"><i class="bx bx-package icon"></i><span class="text">MP Perlas</span></a></li>
+        </ul>
+      </li>
+
+      <!-- Configuración -->
+      <li class="nav-item" title="Configuración">
+        <a href="/perfil"><i class="bx bx-cog icon"></i><span class="text">Configuración</span></a>
+      </li>
+    </ul>
+
+    <!-- Parte inferior -->
+    <ul class="bottom-content">
+      <li title="Cerrar sesión">
+        <a href="/logout"><i class="bx bx-log-out icon"></i><span class="text">Cerrar sesión</span></a>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- ─── CONTENIDO PRINCIPAL ────────────────────────────────────────────── -->
+  <main class="main-content" id="main-content">
+    <%- body %>
+  </main>
+
+  <!-- Lógica común (sin inline) -->
+  <script src="/script.js"></script>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

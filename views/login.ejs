@@ -1,0 +1,44 @@
+<%# ======================================================================
+    login.ejs – Pantalla de acceso con Google Identity Services
+    Requiere:  googleClientId  (pasado desde index.js)
+====================================================================== %>
+
+<section class="d-flex align-items-center justify-content-center" style="min-height:100vh;">
+  <div class="card shadow-lg border-0" style="max-width:420px;width:100%;animation:fadeIn .6s ease;">
+    <div class="card-body p-4 text-center">
+
+      <!-- Logo de tu app (opcional) -->
+      <div class="mb-3">
+        <i class="bx bxs-lock-alt" style="font-size:3rem;color:#EE4B2B;"></i>
+      </div>
+
+      <h4 class="mb-4 fw-semibold">Bienvenido a AppDocs</h4>
+
+      <!-- Botón Google -->
+      <button id="googleLoginBtn" class="btn btn-danger w-100 d-flex align-items-center justify-content-center gap-2">
+        <i class="bx bxl-google" style="font-size:1.2rem;"></i>
+        <span>Iniciar sesión con Google</span>
+      </button>
+
+      <!-- Zona de error -->
+      <div id="loginError" class="alert alert-danger mt-3 d-none" role="alert"></div>
+    </div>
+  </div>
+</section>
+
+<!-- Animación de entrada -->
+<style>
+  @keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
+  #googleLoginBtn:hover { filter:brightness(.92); }
+</style>
+
+<!-- Google Identity Services -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+<!-- Configuración: tu Client-ID OAuth -->
+<script>
+  window.googleAuthConfig = { clientId: "<%= googleClientId %>" };
+</script>
+
+<!-- Lógica de autenticación -->
+<script src="/js/login-google.js"></script>

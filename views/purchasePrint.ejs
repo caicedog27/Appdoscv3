@@ -1,0 +1,40 @@
+<!-- views/purchasePrint.ejs -->
+<%- include('partials/header') %>
+
+<h2>Orden de Compra #<%= order.orderNumber %></h2>
+<p>Fecha: <%= new Date(order.createdAt.toDate ? order.createdAt.toDate() : order.createdAt).toLocaleString() %></p>
+<p>Proveedor ID: <%= order.providerId %></p>
+<p>Proveedor Nombre: <%= order.providerName %></p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Producto</th>
+      <th>Cant</th>
+      <th>Precio</th>
+      <th>Desc</th>
+      <th>Subtotal</th>
+    </tr>
+  </thead>
+  <tbody>
+  <% order.items.forEach(item => { %>
+    <tr>
+      <td><%= item.productName || item.productId %></td>
+      <td><%= item.quantity %></td>
+      <td><%= item.price %></td>
+      <td><%= item.discount %></td>
+      <td><%= (item.quantity * item.price) - item.discount %></td>
+    </tr>
+  <% }) %>
+  </tbody>
+</table>
+
+<p>Subtotal: <%= order.subTotal %></p>
+<p>Descuento total: <%= order.totalDiscount %></p>
+<p>Impuestos: <%= order.totalTaxes %></p>
+<p><strong>Total a Pagar: <%= order.total %></strong></p>
+
+<hr/>
+<p><strong>Notas:</strong> <%= order.notes %></p>
+
+<%- include('partials/footer') %>

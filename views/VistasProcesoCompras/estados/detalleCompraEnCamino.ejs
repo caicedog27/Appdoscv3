@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title><%= title %></title>
+  <!-- Bootstrap CSS -->
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+  />
+  <style>
+    /* Estilos adicionales para darle un toque más creativo */
+    .fade-in {
+      animation: fadeIn 0.5s ease-in forwards;
+      opacity: 0;
+    }
+    @keyframes fadeIn {
+      to { opacity: 1; }
+    }
+    .days-left-banner {
+      font-size: 1.1rem;
+      border: 2px dashed #ccc;
+      background-color: #f9f9f9;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+    .no-edits-label {
+      font-size: 0.85rem;
+      background-color: #e2e3e5;
+      color: #6c757d;
+      padding: 2px 5px;
+      border-radius: 3px;
+      margin-left: 5px;
+    }
+    .provider-header {
+      background-color: #f2f2f2;
+      padding: .75rem;
+      border-radius: 5px;
+      margin-bottom: .5rem;
+      font-weight: 600;
+    }
+    /* Opcional: estilo para filas de la tabla */
+    tbody tr:hover {
+      background-color: #f8f9fa;
+    }
+  </style>
+</head>
+<body>
+<div class="container my-4 fade-in">
+  <h1 class="mb-3"><%= title %></h1>
+
+  <p><strong>ID de Compra:</strong> <%= compraId %></p>
+  <p><strong>Estado General:</strong> EN_CAMINO</p>
+  <p><strong>Progreso:</strong> <%= progress %>%</p>
+
+  <% 
+    // Calcular días que faltan con "compraData.estimatedArrivalDate"
+    let daysLeftMsg = '';
+    if (compraData.estimatedArrivalDate) {
+      const now = new Date();
+      const arrival = new Date(compraData.estimatedArrivalDate);
+      const diffMs = arrival - now;
+      if (diffMs > 0) {
+        const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+        daysLeftMsg = `Faltan aproximadamente ${diffDays} día(s) para la llegada.`;
+      } else {
+        daysLeftMsg = 'La fecha estimada ya pasó o es hoy.';
+      }
+    } else {
+      daysLeftMsg = 'No hay fecha estimada de llegada definida.';
+    }
+  %>
+
+  <div class="days-left-banner">
+    <%= daysLeftMsg %>
+    <br />
+    <strong>Notas de Llegada:</strong> <%= compraData.arrivalNotes || 'Sin notas' %>
+  </div>
+
+  <div class="alert alert-info d-flex justify-content-between align-items-center">
+    <span class="me-2">
+      La compra está en camino. En cuanto se reciba el pedido, márcalo como "<strong>RECIBIDO</strong>".
+    </span>
+    <button class="btn btn-success" onclick="marcarRecibido()">
+      Marcar Recibido
+    </button>
+  </div>
+
+  <!-- Sección de Proveedores -->
+  <% 
+    const providerIds = Object.keys(groupedByProvider);
+    let totalCompraGlobal = 0;
+  %>
+  <div class="accordion" id="accordionProviders">
+    <% providerIds.forEach((pid, idx) => {
+       const items = groupedByProvider[pid];
+       const pName = items[0]?.providerName || pid;
+       let subtotalProveedor = 0;
+    %>
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="heading_<%= pid %>">
+          <button 
+            class="accordion-button collapsed" 
+            type="button" 
+            data-bs-toggle="collapse"
+            data-bs-target="#collapse_<%= pid %>" 
+            aria-expanded="false" 
+            aria-controls="collapse_<%= pid %>"
+          >
+            <%= pName %> (ID: <%= pid %>) - <%= items.length %> ítems
+            <span class="no-edits-label">Lectura</span>
+          </button>
+        </h2>
+        <div 
+          id="collapse_<%= pid %>" 
+          class="accordion-collapse collapse" 
+          aria-labelledby="heading_<%= pid %>"
+          data-bs-parent="#accordionProviders"
+        >
+          <div class="accordion-body">
+            
+            <div class="provider-header">
+              <strong>Proveedor:</strong> <%= pName %>  
+            </div>
+            
+            <div class="table-responsive">
+              <table class="table table-bordered align-middle">
+                <thead class="table-light">
+                  <tr>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th>Cantidad(g)</th>
+                    <th>$/g</th>
+                    <th>Subtotal</th>
+                    <th>IVA</th>
+                    <th>Ret</th>
+                    <th>Total</th>
+                    <th>No Encontrado?</th>
+                    <th>Notas</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% items.forEach(it => {
+                     const grams   = parseFloat(it.negotiatedQuantity)||0;
+                     const priceGr = parseFloat(it.negotiatedPrice)||0;
+                     const ivaPerc = parseFloat(it.iva)||0;
+                     const retPerc = parseFloat(it.ret)||0;
+
+                     const subTotal = grams * priceGr;
+                     const ivaVal   = subTotal * (ivaPerc/100);
+                     const retVal   = subTotal * (retPerc/100);
+                     const finalVal = subTotal + ivaVal - retVal;
+
+                     subtotalProveedor += finalVal;
+                  %>
+                    <tr>
+                      <td><%= it.code %></td>
+                      <td><%= it.name %></td>
+                      <td class="text-end"><%= grams.toFixed(0) %></td>
+                      <td class="text-end"><%= priceGr.toFixed(4) %></td>
+                      <td class="text-end"><%= subTotal.toFixed(2) %></td>
+                      <td class="text-end">
+                        <%= ivaPerc %>% 
+                        (<%= ivaVal.toFixed(2) %>)
+                      </td>
+                      <td class="text-end">
+                        <%= retPerc %>% 
+                        (<%= retVal.toFixed(2) %>)
+                      </td>
+                      <td class="text-end"><%= finalVal.toFixed(2) %></td>
+                      <td class="text-center"><%= it.notFound ? 'Sí' : 'No' %></td>
+                      <td><%= it.notes || '' %></td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+
+            <p class="fw-bold">
+              Subtotal para <%= pName %>: $ <%= subtotalProveedor.toFixed(2) %>
+            </p>
+            <% totalCompraGlobal += subtotalProveedor; %>
+          </div>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+
+  <hr />
+  <h4 class="text-end">
+    TOTAL DE LA COMPRA: $ <%= totalCompraGlobal.toFixed(2) %>
+  </h4>
+  
+  <hr />
+  <h5>Documentos Subidos (Compra):</h5>
+  <% if (compraData.attachments && compraData.attachments.length > 0) { %>
+    <ul>
+      <% compraData.attachments.forEach(a => { %>
+        <li>
+          <a href="<%= a.url %>" target="_blank">
+            <%= a.name %>
+          </a>
+        </li>
+      <% }) %>
+    </ul>
+  <% } else { %>
+    <p class="text-muted">No hay documentos subidos.</p>
+  <% } %>
+
+</div>
+
+<!-- Bootstrap JS -->
+<script 
+  src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js">
+</script>
+<script>
+function marcarRecibido() {
+  if (!confirm('¿Seguro de marcar la compra como RECIBIDO?')) return;
+  fetch('/inventarios/popping/procesoCompra/<%= compraId %>/changeMainState', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ newMainState: 'RECIBIDO' })
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (!d.success) alert('Error: ' + d.error);
+    else {
+      alert('Compra marcada como RECIBIDO');
+      window.location.reload();
+    }
+  })
+  .catch(err => {
+    alert('Error: ' + err);
+  });
+}
+</script>
+</body>
+</html>

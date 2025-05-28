@@ -1,0 +1,1010 @@
+<!-- views/listaComprasMp.ejs -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title><%= title %></title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Bootstrap CSS + Icons -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+  <link 
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css"
+  />
+
+  <style>
+    /* Overlay de carga */
+    #loadingOverlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.4);
+      color: #fff;
+      font-size: 1.5rem;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .container {
+      padding: 20px;
+      max-width: 100%;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    /* Acordeón */
+    .group-container {
+      margin-bottom: 20px;
+      border: 1px solid #ced4da;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .group-header {
+      background-color: #e9ecef;
+      cursor: pointer;
+      padding: 10px;
+      font-size: 1.2rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .group-body {
+      display: none;
+      padding: 10px;
+    }
+    .table thead th {
+      background-color: #343a40;
+      color: #fff;
+      white-space: nowrap;
+    }
+
+    /* Panel maestro p/ reordenar grupos */
+    #groupMasterPanel {
+      display: none;
+      margin-bottom: 20px;
+      padding: 15px;
+      background-color: #fff;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    .group-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+      gap: 8px;
+    }
+    .btn-move-up, .btn-move-down {
+      background-color: #6c757d;
+      border: none;
+      color: #fff;
+      padding: 4px 8px;
+      font-size: 0.8rem;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn-move-up:hover, .btn-move-down:hover {
+      background-color: #5a6268;
+    }
+
+    /* Filtros */
+    .filter-controls {
+      margin-bottom: 15px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: center;
+    }
+    .filter-controls input[type="text"],
+    .filter-controls input[type="number"] {
+      max-width: 180px;
+    }
+
+    /* Selección de columnas - Dropdown */
+    .dropdown-menu {
+      padding: 10px;
+    }
+    .colToggleItem {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin: 3px 0;
+    }
+
+    /* Colores con data-color */
+    table.table-bordered tbody tr[data-color="transparent"] > td {
+      background-color: transparent !important;
+    }
+    table.table-bordered tbody tr[data-color="red"] > td {
+      background-color: #f8d7da !important;
+    }
+    table.table-bordered tbody tr[data-color="yellow"] > td {
+      background-color: #fff3cd !important;
+    }
+    table.table-bordered tbody tr[data-color="green"] > td {
+      background-color: #d4edda !important;
+    }
+    table.table-bordered tbody tr[data-color="blue"] > td {
+      background-color: #cce5ff !important;
+    }
+
+    /* Hover en lista de proveedores */
+    .provider-item:hover {
+      background-color: #d1ecf1;
+    }
+  </style>
+</head>
+<body>
+  <!-- Overlay de carga -->
+  <div id="loadingOverlay">Cargando...</div>
+
+  <div class="container">
+    <h1><%= title %></h1>
+    <div class="d-flex flex-wrap mb-3 gap-2 justify-content-center">
+      <!-- Dropdown Selección de columnas -->
+      <div class="dropdown">
+        <button class="btn btn-secondary dropdown-toggle"
+                type="button" id="colSelectorBtn" data-bs-toggle="dropdown"
+                aria-expanded="false">
+          Seleccionar columnas
+        </button>
+        <div class="dropdown-menu" aria-labelledby="colSelectorBtn">
+          <div class="colToggleItem">
+            <input type="checkbox" class="form-check-input colToggle" data-key="code" id="toggle_code" checked />
+            <label for="toggle_code">Código</label>
+          </div>
+          <div class="colToggleItem">
+            <input type="checkbox" class="form-check-input colToggle" data-key="name" id="toggle_name" checked />
+            <label for="toggle_name">Nombre</label>
+          </div>
+          <div class="colToggleItem">
+            <input type="checkbox" class="form-check-input colToggle" data-key="stock_control" id="toggle_stock" checked />
+            <label for="toggle_stock">Stock?</label>
+          </div>
+          <div class="colToggleItem">
+            <input type="checkbox" class="form-check-input colToggle" data-key="available_quantity" id="toggle_qty" checked />
+            <label for="toggle_qty">Cant. Disponible</label>
+          </div>
+          <div class="colToggleItem">
+            <input type="checkbox" class="form-check-input colToggle" data-key="idealValue" id="toggle_ideal" checked />
+            <label for="toggle_ideal">Ideal</label>
+          </div>
+          <!-- NUEVA COLUMNA 'unidad' -->
+          <div class="colToggleItem">
+            <input type="checkbox" class="form-check-input colToggle" data-key="unit" id="toggle_unit" checked />
+            <label for="toggle_unit">Unidad</label>
+          </div>
+          <div class="colToggleItem">
+            <input type="checkbox" class="form-check-input colToggle" data-key="config" id="toggle_config" checked />
+            <label for="toggle_config">Config</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Botón panel reordenar/ocultar grupos -->
+      <button class="btn btn-info" id="toggleGroupMasterBtn">Opciones de Grupos</button>
+
+      <!-- Botón ver carrito -->
+      <button class="btn btn-success" id="btnShowCart">
+        Ver Carrito / Finalizar
+      </button>
+    </div>
+
+    <!-- Panel para reordenar/ocultar grupos -->
+    <div id="groupMasterPanel">
+      <h4>Reordenar / Ocultar Grupos</h4>
+      <p>Usa los botones para mover arriba/abajo. Marca/desmarca para ocultar.</p>
+      <div id="groupList"></div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filter-controls">
+      <input type="text" id="searchInput" class="form-control" placeholder="Buscar código/nombre">
+      <input type="number" id="minQtyInput" class="form-control" placeholder="Cant. mínima">
+      <input type="number" id="maxQtyInput" class="form-control" placeholder="Cant. máxima">
+      <button class="btn btn-outline-danger" id="btnOutOfParams">Fuera de Parámetros</button>
+    </div>
+
+    <!-- Grupos en acordeón -->
+    <% const groupNames = Object.keys(grouped); %>
+    <div id="groupContainers">
+      <% groupNames.forEach((groupName, gIdx) => {
+         const items = grouped[groupName];
+      %>
+        <div
+          class="group-container"
+          data-group-name="<%= groupName %>"
+          id="groupContainer_<%= gIdx %>"
+        >
+          <div class="group-header">
+            <span><%= groupName %></span>
+            <span><strong><%= items.length %> productos</strong></span>
+          </div>
+          <div class="group-body" id="groupBody_<%= gIdx %>">
+            <div class="table-responsive mt-3">
+              <table class="table table-bordered group-table">
+                <thead>
+                  <tr>
+                    <th class="col-code">Código</th>
+                    <th class="col-name">Nombre</th>
+                    <th class="col-stock_control">Stock?</th>
+                    <th class="col-available_quantity">Cant. Disponible</th>
+                    <th class="col-idealValue">Ideal</th>
+                    <!-- Nueva columna: Unidad -->
+                    <th class="col-unit">Unidad</th>
+                    <th class="col-config">Config</th>
+                    <th>Añadir</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% items.forEach(prod => {
+                     const qty = prod.available_quantity || 0;
+                     let unitName = '';
+                     if (prod.unit && prod.unit.name) {
+                       unitName = prod.unit.name;
+                     } else if (prod.unit_label) {
+                       unitName = prod.unit_label;
+                     }
+                  %>
+                    <tr data-color="<%= prod.colorName %>"
+                        data-code="<%= (prod.code || '').toLowerCase() %>"
+                        data-name="<%= (prod.name || '').toLowerCase() %>"
+                        data-qty="<%= qty %>"
+                        data-siigocode="<%= prod.code %>"
+                        data-min="<%= prod.minValue %>"
+                        data-ideal="<%= prod.idealValue %>"
+                        data-max="<%= prod.maxValue %>"
+                        data-unit="<%= unitName %>"
+                    >
+                      <td class="col-code"><%= prod.code %></td>
+                      <td class="col-name"><%= prod.name %></td>
+                      <td class="col-stock_control"><%= prod.stock_control ? 'Sí' : 'No' %></td>
+                      <td class="col-available_quantity"><%= qty %></td>
+                      <td class="col-idealValue"><%= prod.idealValue %></td>
+                      <!-- Aquí mostramos la unidad -->
+                      <td class="col-unit"><%= unitName %></td>
+                      <td class="col-config">
+                        <button class="btn btn-sm btn-warning"
+                                onclick="openConfigModal(this)">
+                          Config
+                        </button>
+                      </td>
+                      <td>
+                        <!-- Botón Añadir/Editar Carrito -->
+                        <button class="btn btn-sm btn-primary" onclick="openCartModal(this)">
+                          <i class="bi bi-cart-plus"></i> Añadir
+                        </button>
+                        <!-- Span para mostrar la cantidad en carrito (si ya existe) -->
+                        <span class="cart-qty-label" style="margin-left:8px; font-weight:bold;"></span>
+                      </td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+
+    <hr />
+    <p class="text-center">Total de productos en lista de compras: <%= totalProducts %></p>
+  </div>
+
+  <!-- MODAL: Config Inventario -->
+  <div class="modal fade" id="configModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Configurar Inventario</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form>
+            <div class="mb-3">
+              <label class="form-label">Código:</label>
+              <input type="text" id="modalCode" class="form-control" readonly />
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Mínimo:</label>
+              <input type="number" id="modalMin" class="form-control" />
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Ideal:</label>
+              <input type="number" id="modalIdeal" class="form-control" />
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Máximo:</label>
+              <input type="number" id="modalMax" class="form-control" />
+            </div>
+            <input type="hidden" id="modalQty" />
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button class="btn btn-primary" onclick="saveConfig()">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Añadir al Carrito (cartModal) -->
+  <div class="modal fade" id="cartModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Añadir Producto al Carrito</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form>
+            <div class="mb-2">
+              <label class="form-label">Código:</label>
+              <input type="text" id="cartModalCode" class="form-control" readonly />
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Nombre:</label>
+              <input type="text" id="cartModalName" class="form-control" readonly />
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Cantidad Disponible:</label>
+              <input type="number" id="cartModalAvailable" class="form-control" readonly />
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Unidad:</label>
+              <input type="text" id="cartModalUnit" class="form-control" readonly />
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Cantidad Recomendada a Comprar:</label>
+              <input type="number" id="cartModalRecommended" class="form-control" />
+            </div>
+
+            <!-- Buscar proveedores -->
+            <div class="mb-2">
+              <label class="form-label">Proveedor (buscar o crear):</label>
+              <div class="d-flex gap-2">
+                <input type="text" id="providerSearchInput" class="form-control"
+                       placeholder="Texto para buscar" />
+                <button type="button" class="btn btn-secondary" onclick="openAddProviderModal()">
+                  <i class="bi bi-plus-circle"></i>
+                </button>
+              </div>
+              <div id="providerSearchResults" style="max-height:150px; overflow:auto; border:1px solid #ccc; margin-top:5px;">
+                <!-- Se llena con la búsqueda -->
+              </div>
+            </div>
+
+            <input type="hidden" id="cartModalProviderId" />
+            <input type="hidden" id="cartModalProviderName" />
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button class="btn btn-primary" onclick="addItemToCart()">Agregar al Carrito</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Crear Nuevo Proveedor -->
+  <div class="modal fade" id="addProviderModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Crear Nuevo Proveedor</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form>
+            <div class="mb-2">
+              <label class="form-label">Nombre:</label>
+              <input type="text" id="newProvNombre" class="form-control" />
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Identificación:</label>
+              <input type="text" id="newProvIdentificacion" class="form-control" />
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Dirección:</label>
+              <input type="text" id="newProvDireccion" class="form-control" />
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Teléfono:</label>
+              <input type="text" id="newProvTelefono" class="form-control" />
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button class="btn btn-primary" onclick="saveNewProvider()">Guardar Proveedor</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Carrito Final (finalCartModal) -->
+  <div class="modal fade" id="finalCartModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Carrito de Compras</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <table class="table table-striped" id="cartTable">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Nombre</th>
+                <th>Proveedor</th>
+                <th>Cant. a Comprar</th>
+                <th>Unidad</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Se llena dinámicamente con JS -->
+            </tbody>
+          </table>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-danger" onclick="clearCart()">Vaciar Carrito</button>
+          <button class="btn btn-primary" onclick="finalizeCart()">Finalizar Lista de Compra</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script 
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js">
+  </script>
+
+  <script>
+    // Overlay
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    function showLoader(msg='Cargando...') {
+      loadingOverlay.innerText = msg;
+      loadingOverlay.style.display = 'flex';
+    }
+    function hideLoader() {
+      loadingOverlay.style.display = 'none';
+    }
+
+    // =========== ACORDEÓN ===========
+    document.querySelectorAll('.group-header').forEach(header => {
+      header.addEventListener('click', () => {
+        const body = header.nextElementSibling;
+        if (!body) return;
+        body.style.display = (body.style.display === 'block') ? 'none' : 'block';
+      });
+    });
+
+    // =========== PANEL MAESTRO (reordenar/ocultar grupos) ===========
+    const toggleGroupMasterBtn = document.getElementById('toggleGroupMasterBtn');
+    const groupMasterPanel     = document.getElementById('groupMasterPanel');
+    const groupContainersEl    = document.getElementById('groupContainers');
+    const groupListEl          = document.getElementById('groupList');
+
+    const allGroupDivs = groupContainersEl.querySelectorAll('.group-container');
+    let groupOrder = [];
+    allGroupDivs.forEach(div => {
+      groupOrder.push(div.dataset.groupName);
+    });
+
+    function renderGroupList() {
+      groupListEl.innerHTML = '';
+      groupOrder.forEach(gName => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'group-item';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = true;
+        checkbox.id = 'groupCheck_' + gName;
+        checkbox.addEventListener('change', () => {
+          toggleGroupVisibility(gName, checkbox.checked);
+        });
+
+        const label = document.createElement('label');
+        label.htmlFor = checkbox.id;
+        label.textContent = gName;
+        label.style.flex = '1';
+
+        const btnUp = document.createElement('button');
+        btnUp.type = 'button';
+        btnUp.className = 'btn-move-up';
+        btnUp.textContent = '↑';
+        btnUp.addEventListener('click', () => moveGroupUp(gName));
+
+        const btnDown = document.createElement('button');
+        btnDown.type = 'button';
+        btnDown.className = 'btn-move-down';
+        btnDown.textContent = '↓';
+        btnDown.addEventListener('click', () => moveGroupDown(gName));
+
+        itemDiv.appendChild(checkbox);
+        itemDiv.appendChild(label);
+        itemDiv.appendChild(btnUp);
+        itemDiv.appendChild(btnDown);
+
+        groupListEl.appendChild(itemDiv);
+      });
+    }
+
+    function toggleGroupVisibility(gName, visible) {
+      const container = [...allGroupDivs].find(d => d.dataset.groupName === gName);
+      if (container) {
+        container.style.display = visible ? '' : 'none';
+      }
+    }
+
+    function moveGroupUp(gName) {
+      const idx = groupOrder.indexOf(gName);
+      if (idx > 0) {
+        [groupOrder[idx - 1], groupOrder[idx]] = [groupOrder[idx], groupOrder[idx - 1]];
+        reorderDOM();
+        renderGroupList();
+      }
+    }
+    function moveGroupDown(gName) {
+      const idx = groupOrder.indexOf(gName);
+      if (idx < groupOrder.length - 1) {
+        [groupOrder[idx], groupOrder[idx + 1]] = [groupOrder[idx + 1], groupOrder[idx]];
+        reorderDOM();
+        renderGroupList();
+      }
+    }
+    function reorderDOM() {
+      groupOrder.forEach(gName => {
+        const container = [...allGroupDivs].find(d => d.dataset.groupName === gName);
+        if (container) {
+          groupContainersEl.appendChild(container);
+        }
+      });
+    }
+
+    toggleGroupMasterBtn.addEventListener('click', () => {
+      groupMasterPanel.style.display =
+        (groupMasterPanel.style.display === 'none') ? 'block' : 'none';
+    });
+    renderGroupList();
+
+    // =========== SELECCIÓN DE COLUMNAS ===========
+    document.querySelectorAll('.colToggle').forEach(chk => {
+      chk.addEventListener('change', () => {
+        const key = chk.dataset.key;
+        document.querySelectorAll('.col-' + key).forEach(td => {
+          td.style.display = chk.checked ? '' : 'none';
+        });
+      });
+    });
+
+    // =========== FILTROS ===========
+    const searchInput = document.getElementById('searchInput');
+    const minQtyInput = document.getElementById('minQtyInput');
+    const maxQtyInput = document.getElementById('maxQtyInput');
+    const btnOutOfParams = document.getElementById('btnOutOfParams');
+
+    let outOfParamsActive = false; // Toggle state
+
+    btnOutOfParams.addEventListener('click', () => {
+      outOfParamsActive = !outOfParamsActive;
+      btnOutOfParams.textContent = outOfParamsActive ? 'Mostrar Todos' : 'Fuera de Parámetros';
+      applyFilters(outOfParamsActive);
+    });
+
+    function applyFilters(outOfParams=false) {
+      const sVal = (searchInput.value || '').toLowerCase();
+      const minQ = parseFloat(minQtyInput.value) || Number.MIN_SAFE_INTEGER;
+      const maxQ = parseFloat(maxQtyInput.value) || Number.MAX_SAFE_INTEGER;
+
+      document.querySelectorAll('.group-table tbody tr').forEach(row => {
+        const code  = row.dataset.code || '';
+        const name  = row.dataset.name || '';
+        const qty   = parseFloat(row.dataset.qty) || 0;
+        const color = row.dataset.color || 'transparent';
+
+        // Filtrado texto
+        const matchText = (code.includes(sVal) || name.includes(sVal));
+        // Filtrado rango
+        const matchQty  = (qty >= minQ && qty <= maxQ);
+
+        // “Fuera de parámetros” => color != green ni transparent
+        let matchColor = true;
+        if (outOfParams) {
+          if (color === 'green' || color === 'transparent') {
+            matchColor = false;
+          }
+        }
+
+        row.style.display = (matchText && matchQty && matchColor) ? '' : 'none';
+      });
+    }
+
+    searchInput.addEventListener('input', () => applyFilters(outOfParamsActive));
+    minQtyInput.addEventListener('input', () => applyFilters(outOfParamsActive));
+    maxQtyInput.addEventListener('input', () => applyFilters(outOfParamsActive));
+
+    // =========== MODAL CONFIG INVENTARIO ===========
+    const configModal = new bootstrap.Modal(document.getElementById('configModal'));
+    let currentRow = null;
+
+    function openConfigModal(btn) {
+      const tr = btn.closest('tr');
+      if (!tr) return;
+      currentRow = tr;
+
+      const code  = tr.dataset.siigocode || '';
+      const min   = tr.dataset.min || '0';
+      const ideal = tr.dataset.ideal || '0';
+      const max   = tr.dataset.max || '0';
+      const qty   = tr.dataset.qty || '0';
+
+      document.getElementById('modalCode').value   = code;
+      document.getElementById('modalMin').value    = min;
+      document.getElementById('modalIdeal').value  = ideal;
+      document.getElementById('modalMax').value    = max;
+      document.getElementById('modalQty').value    = qty;
+
+      configModal.show();
+    }
+    window.openConfigModal = openConfigModal;
+
+    async function saveConfig() {
+      const code  = document.getElementById('modalCode').value;
+      const min   = document.getElementById('modalMin').value;
+      const ideal = document.getElementById('modalIdeal').value;
+      const max   = document.getElementById('modalMax').value;
+      const qty   = document.getElementById('modalQty').value;
+
+      if (!code) {
+        alert('Código inválido');
+        return;
+      }
+      try {
+        showLoader('Guardando...');
+        const resp = await fetch('/inventarios/materiaPrima/popping/updateInventoryConfig', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, min, ideal, max, qty })
+        });
+        const data = await resp.json();
+        hideLoader();
+
+        if (data.success) {
+          alert('Configuración guardada');
+          configModal.hide();
+
+          // Actualizar color en la fila
+          if (currentRow && data.newColor) {
+            currentRow.dataset.color = data.newColor;
+          }
+          applyFilters(outOfParamsActive);
+        } else {
+          alert('Error: ' + (data.error || ''));
+        }
+      } catch (err) {
+        hideLoader();
+        alert('Error guardando la config\n' + err);
+      }
+    }
+    window.saveConfig = saveConfig;
+
+    // =========== SECCIÓN CARRITO ===========
+    let cartItems = [];
+    const cartModal = new bootstrap.Modal(document.getElementById('cartModal'));
+    const finalCartModal = new bootstrap.Modal(document.getElementById('finalCartModal'));
+    const addProviderModal = new bootstrap.Modal(document.getElementById('addProviderModal'));
+
+    function openCartModal(btn) {
+      const tr = btn.closest('tr');
+      if (!tr) return;
+
+      const code  = tr.dataset.siigocode || '';
+      const name  = tr.querySelector('.col-name')?.innerText || '';
+      const qty   = parseFloat(tr.dataset.qty) || 0;
+      const ideal = parseFloat(tr.dataset.ideal) || 0;
+      const unit  = tr.dataset.unit || '';
+
+      // Cálculo sugerido
+      let recommended = 0;
+      if (qty < ideal) {
+        recommended = ideal - qty;
+      }
+
+      // Si el producto ya existe en el carrito, precargamos su cantidad
+      const existingItem = cartItems.find(item => item.code === code);
+      if (existingItem) {
+        recommended = existingItem.quantityToBuy;
+      }
+
+      document.getElementById('cartModalCode').value       = code;
+      document.getElementById('cartModalName').value       = name;
+      document.getElementById('cartModalAvailable').value  = qty;
+      document.getElementById('cartModalUnit').value       = unit;
+      document.getElementById('cartModalRecommended').value= recommended;
+
+      // Limpiar/proveedor si deseas
+      document.getElementById('cartModalProviderId').value   = existingItem?.providerId   || '';
+      document.getElementById('cartModalProviderName').value = existingItem?.providerName || '';
+      if (!existingItem) {
+        document.getElementById('providerSearchInput').value   = '';
+        document.getElementById('providerSearchResults').innerHTML = '';
+      } else {
+        document.getElementById('providerSearchInput').value = existingItem.providerName || '';
+      }
+
+      cartModal.show();
+    }
+    window.openCartModal = openCartModal;
+
+    // Buscar proveedores
+    const providerInput = document.getElementById('providerSearchInput');
+    const providerResultsDiv = document.getElementById('providerSearchResults');
+    let providerSearchTimeout = null;
+
+    providerInput.addEventListener('input', () => {
+      const val = providerInput.value.trim();
+      if (!val) {
+        providerResultsDiv.innerHTML = '';
+        return;
+      }
+      if (providerSearchTimeout) {
+        clearTimeout(providerSearchTimeout);
+      }
+      providerSearchTimeout = setTimeout(() => {
+        searchProviders(val);
+      }, 300);
+    });
+
+    async function searchProviders(query) {
+      try {
+        showLoader('Buscando proveedores...');
+        const resp = await fetch('/inventarios/providers?q=' + encodeURIComponent(query));
+        const data = await resp.json();
+        hideLoader();
+
+        if (!data.success) {
+          providerResultsDiv.innerHTML = '<div class="text-danger">Error en la búsqueda</div>';
+          return;
+        }
+        renderProviderResults(data.providers);
+      } catch (err) {
+        hideLoader();
+        providerResultsDiv.innerHTML = '<div class="text-danger">Error al buscar</div>';
+      }
+    }
+
+    function renderProviderResults(providers) {
+      providerResultsDiv.innerHTML = '';
+      providers.forEach(p => {
+        // p: { source, id, nombre, identificacion... }
+        const div = document.createElement('div');
+        div.className = 'p-1 border-bottom provider-item';
+        let label = `[${p.source}] ${p.nombre}`;
+        if (p.identificacion) {
+          label += ` (ID:${p.identificacion})`;
+        }
+        div.textContent = label;
+        div.style.cursor = 'pointer';
+
+        div.addEventListener('click', () => {
+          document.getElementById('cartModalProviderId').value   = p.id;
+          document.getElementById('cartModalProviderName').value = p.nombre;
+          providerInput.value = p.nombre;
+          providerResultsDiv.innerHTML = '';
+        });
+        providerResultsDiv.appendChild(div);
+      });
+    }
+
+    function openAddProviderModal() {
+      document.getElementById('newProvNombre').value = '';
+      document.getElementById('newProvIdentificacion').value = '';
+      document.getElementById('newProvDireccion').value = '';
+      document.getElementById('newProvTelefono').value = '';
+      addProviderModal.show();
+    }
+    window.openAddProviderModal = openAddProviderModal;
+
+    // Crear proveedor en Firestore
+    async function saveNewProvider() {
+      const nombre         = document.getElementById('newProvNombre').value.trim();
+      const identificacion = document.getElementById('newProvIdentificacion').value.trim();
+      const direccion      = document.getElementById('newProvDireccion').value.trim();
+      const telefono       = document.getElementById('newProvTelefono').value.trim();
+
+      if (!nombre) {
+        alert('El nombre es requerido');
+        return;
+      }
+      try {
+        showLoader('Guardando proveedor...');
+        const resp = await fetch('/inventarios/providers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nombre, identificacion, direccion, telefono })
+        });
+        const data = await resp.json();
+        hideLoader();
+        if (data.success) {
+          alert('Proveedor creado ID: ' + data.provider.id);
+          addProviderModal.hide();
+
+          // Asignar al formulario actual
+          providerInput.value = data.provider.nombre;
+          document.getElementById('cartModalProviderId').value   = data.provider.id;
+          document.getElementById('cartModalProviderName').value = data.provider.nombre;
+        } else {
+          alert('Error al crear proveedor: ' + data.error);
+        }
+      } catch (err) {
+        hideLoader();
+        alert('Error: ' + err);
+      }
+    }
+    window.saveNewProvider = saveNewProvider;
+
+    // Añadir o Actualizar en el carrito
+    function addItemToCart() {
+      const code         = document.getElementById('cartModalCode').value;
+      const name         = document.getElementById('cartModalName').value;
+      const recommended  = parseFloat(document.getElementById('cartModalRecommended').value) || 0;
+      const providerId   = document.getElementById('cartModalProviderId').value || '';
+      const providerName = document.getElementById('cartModalProviderName').value || '';
+      const unit         = document.getElementById('cartModalUnit').value || 'u';
+
+      if (!providerId) {
+        alert('Selecciona (o crea) un proveedor');
+        return;
+      }
+
+      // Ver si ya existe en carrito
+      const existingIndex = cartItems.findIndex(item => item.code === code);
+      if (existingIndex >= 0) {
+        // Actualizar
+        cartItems[existingIndex].quantityToBuy = recommended;
+        cartItems[existingIndex].providerId    = providerId;
+        cartItems[existingIndex].providerName  = providerName;
+        cartItems[existingIndex].unit          = unit;
+      } else {
+        // Agregar
+        cartItems.push({
+          code,
+          name,
+          providerId,
+          providerName,
+          quantityToBuy: recommended,
+          unit
+        });
+      }
+
+      // Actualizar la UI => span con la cantidad
+      const allRows = document.querySelectorAll('.group-table tbody tr');
+      allRows.forEach(row => {
+        if (row.dataset.siigocode === code) {
+          const spanQty = row.querySelector('.cart-qty-label');
+          if (spanQty) {
+            if (recommended > 0) {
+              spanQty.textContent = `(${recommended})`;
+            } else {
+              spanQty.textContent = '';
+            }
+          }
+        }
+      });
+
+      alert('Carrito actualizado!');
+      cartModal.hide();
+    }
+    window.addItemToCart = addItemToCart;
+
+    // Mostrar modal final de Carrito
+    const btnShowCart = document.getElementById('btnShowCart');
+    btnShowCart.addEventListener('click', () => {
+      renderCartTable();
+      finalCartModal.show();
+    });
+
+    function renderCartTable() {
+      const tbody = document.querySelector('#cartTable tbody');
+      tbody.innerHTML = '';
+      cartItems.forEach((item, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${item.code}</td>
+          <td>${item.name}</td>
+          <td>${item.providerName}</td>
+          <td>${item.quantityToBuy}</td>
+          <td>${item.unit}</td>
+          <td>
+            <button class="btn btn-sm btn-danger" onclick="removeCartItem(${idx})">
+              <i class="bi bi-trash"></i>
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function removeCartItem(idx) {
+      const removed = cartItems.splice(idx, 1)[0];
+      // También limpiar el span en la tabla
+      if (removed && removed.code) {
+        const allRows = document.querySelectorAll('.group-table tbody tr');
+        allRows.forEach(row => {
+          if (row.dataset.siigocode === removed.code) {
+            const spanQty = row.querySelector('.cart-qty-label');
+            if (spanQty) {
+              spanQty.textContent = '';
+            }
+          }
+        });
+      }
+      renderCartTable();
+    }
+    window.removeCartItem = removeCartItem;
+
+    function clearCart() {
+      if (!confirm('¿Seguro de vaciar el carrito?')) return;
+      cartItems.forEach(ci => {
+        const row = document.querySelector(`.group-table tbody tr[data-siigocode="${ci.code}"]`);
+        if (row) {
+          const spanQty = row.querySelector('.cart-qty-label');
+          if (spanQty) spanQty.textContent = '';
+        }
+      });
+      cartItems = [];
+      renderCartTable();
+    }
+    window.clearCart = clearCart;
+
+    async function finalizeCart() {
+      if (cartItems.length === 0) {
+        alert('No hay items en el carrito');
+        return;
+      }
+      if (!confirm('¿Confirmar el envío de esta lista de compra?')) return;
+
+      try {
+        showLoader('Enviando lista de compra...');
+        const resp = await fetch('/inventarios/materiaPrima/popping/finalizePurchaseList', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cartItems })
+        });
+        const data = await resp.json();
+        hideLoader();
+        if (data.success) {
+          alert('Lista de compra guardada con éxito. ID: ' + data.docId);
+          // Limpiar spans en la tabla
+          cartItems.forEach(ci => {
+            const row = document.querySelector(`.group-table tbody tr[data-siigocode="${ci.code}"]`);
+            if (row) {
+              const spanQty = row.querySelector('.cart-qty-label');
+              if (spanQty) spanQty.textContent = '';
+            }
+          });
+          cartItems = [];
+          finalCartModal.hide();
+        } else {
+          alert('Error al guardar: ' + (data.error || ''));
+        }
+      } catch (err) {
+        hideLoader();
+        alert('Error al enviar la lista de compra\n' + err);
+      }
+    }
+    window.finalizeCart = finalizeCart;
+  </script>
+</body>
+</html>

@@ -1,0 +1,231 @@
+/* =========================
+   Reset y tipografía
+========================= */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+/* =========================
+   Layout Principal
+========================= */
+.container {
+    display: flex;        /* Para que sidebar y main estén en fila */
+    min-height: 100vh;    /* Ocupa toda la altura de la pantalla */
+    width: 100%;
+    background-color: #f1f1f1;
+}
+
+/* =========================
+   Sidebar
+========================= */
+.sidebar {
+    background-color: #1d1b31;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    transition: width 0.3s ease;
+    width: 250px;          /* Ancho por defecto */
+    overflow: hidden;
+    position: relative;
+    z-index: 100;
+}
+
+.sidebar.collapsed {
+    width: 80px;           /* Ancho al colapsar */
+}
+
+/* Logo y toggle */
+.logo-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px 20px;
+    background-color: #11101d;
+}
+
+.logo {
+    font-size: 24px;
+    font-weight: bold;
+    margin-right: 10px;
+}
+
+.logo-text {
+    font-size: 16px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: opacity 0.3s ease;
+}
+
+/* Ocultar el texto del logo en modo colapsado */
+.sidebar.collapsed .logo-text {
+    opacity: 0;
+    width: 0;
+    overflow: hidden;
+}
+
+.toggle-btn {
+    font-size: 20px;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.sidebar.collapsed .toggle-btn {
+    transform: rotate(180deg);
+}
+
+/* =========================
+   Menú
+========================= */
+.menu-links {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    flex-grow: 1;
+    overflow-y: auto;  /* Si el menú es muy largo, permite scroll */
+}
+
+.nav-item {
+    position: relative;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.nav-item a {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    transition: background 0.3s ease;
+}
+
+.nav-item a:hover {
+    background-color: #27293d;
+}
+
+.icon {
+    font-size: 20px;
+    margin-right: 10px;
+}
+
+.sidebar.collapsed .text {
+    display: none;
+}
+
+/* Tooltip en modo colapsado */
+.sidebar.collapsed .nav-item a::after {
+    content: attr(title);
+    position: absolute;
+    left: calc(100% + 10px);
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: #27293d;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    font-size: 14px;
+}
+
+.sidebar.collapsed .nav-item a:hover::after {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+}
+
+/* =========================
+   Submenús
+========================= */
+.submenu {
+    list-style: none;
+    padding-left: 20px;
+    margin-top: 5px;
+    display: none;
+}
+
+.nav-item.open .submenu {
+    display: block;
+}
+
+.submenu li a {
+    padding: 8px 20px;
+    border-radius: 6px;
+    transition: background 0.3s ease;
+}
+
+.submenu li a:hover {
+    background-color: #27293d;
+}
+
+/* Flecha del submenú */
+.arrow {
+    margin-left: auto;
+    transition: transform 0.3s ease;
+}
+
+.nav-item.open .arrow {
+    transform: rotate(180deg);
+}
+
+/* =========================
+   Bottom menu
+========================= */
+.bottom-content {
+    padding: 10px 20px;
+}
+
+.bottom-content li a {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    transition: background 0.3s ease;
+}
+
+.bottom-content li a:hover {
+    background-color: #27293d;
+}
+
+/* =========================
+   Contenido principal
+========================= */
+.main-content {
+    flex: 1;             /* Toma todo el espacio disponible a la derecha */
+    padding: 20px;
+    overflow-y: auto;    /* Si el contenido es largo, scroll vertical */
+    transition: margin-left 0.3s ease;
+}
+
+/* Al colapsar el sidebar, podrías mover un poco el contenido si quieres */
+.sidebar.collapsed + .main-content {
+    /* margin-left: 80px; (opcional, según tu preferencia) */
+}
+
+/* =========================
+   Tablas (Bootstrap override)
+========================= */
+.table {
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.table th, .table td {
+    vertical-align: middle;
+    text-align: center;
+}
+
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}

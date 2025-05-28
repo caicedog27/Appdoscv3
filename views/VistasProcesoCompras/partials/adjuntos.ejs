@@ -1,0 +1,19 @@
+<!-- views/VistasProcesoCompras/partials/adjuntos.ejs -->
+<hr />
+<h4>Adjuntar Documentos (Fichas, Soportes, etc.)</h4>
+<form action="/inventarios/popping/procesoCompra/<%= compraId %>/adjuntar"
+      method="post" enctype="multipart/form-data">
+  <div class="mb-2">
+    <input type="file" name="file" class="form-control" />
+  </div>
+  <button class="btn btn-primary" type="submit">Subir</button>
+</form>
+
+<% if (compraData.attachments) { %>
+  <h5 class="mt-3">Documentos Subidos:</h5>
+  <ul>
+    <% compraData.attachments.forEach(a => { %>
+      <li><a href="<%= a.url %>" target="_blank"><%= a.name %></a></li>
+    <% }) %>
+  </ul>
+<% } %>

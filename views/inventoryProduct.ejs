@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title %></title>
+
+  <!-- ===== Bootstrap CSS ===== -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+
+  <!-- ===== Estilos ===== -->
+  <style>
+    /* ---------------------------------------------
+       1) VARIABLES GLOBALES Y VALORES BASE
+    ----------------------------------------------*/
+    :root {
+      --primary-color: #343a40;
+      --secondary-color: #f8f9fa;
+      --green-color: #07d437;
+      --yellow-color: #f7c00d;
+      --orange-color: #d8913f;
+      --red-color: #e61628;
+      --shadow-color: rgba(0, 0, 0, 0.1);
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* ---------------------------------------------
+       2) CONTENEDORES Y LAYOUT
+    ----------------------------------------------*/
+    .container-custom {
+      width: 100%;
+      padding: 10px 0;
+    }
+
+    .scroll-wrapper {
+      /* No usar overflow-x: hidden para no recortar tablas grandes */
+    }
+
+    /* ---------------------------------------------
+       3) TABLA Y ESTILOS DE CELDAS
+    ----------------------------------------------*/
+    .table-container {
+      width: 100%;
+      margin-bottom: 40px;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px var(--shadow-color);
+      background-color: #fff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      border-radius: 10px;
+      overflow: hidden; /* para esquinas redondeadas */
+    }
+
+    th,
+    td {
+      padding: 12px;
+      border: 1px solid #dee2e6;
+      text-align: center;
+      vertical-align: middle;
+      font-size: 1rem;
+      transition: background-color 0.3s ease;
+    }
+
+    th {
+      background-color: var(--primary-color);
+      color: #fff;
+      font-weight: bold;
+    }
+
+    td:hover {
+      background-color: rgba(52, 58, 64, 0.1);
+      cursor: pointer;
+    }
+
+    .presentation-header {
+      background-color: var(--secondary-color);
+      font-weight: bold;
+    }
+
+    /* ---------------------------------------------
+       4) COLORES CONDICIONALES
+    ----------------------------------------------*/
+    .cell-red {
+      background-color: var(--red-color) !important;
+      color: #fff; /* texto en blanco */
+      font-weight: bold;
+    }
+    .cell-orange {
+      background-color: var(--orange-color) !important;
+      color: #fff;
+      font-weight: bold;
+    }
+    .cell-yellow {
+      background-color: var(--yellow-color) !important;
+      color: #000;
+      font-weight: bold;
+    }
+    .cell-green {
+      background-color: var(--green-color) !important;
+      color: #fff;
+      font-weight: bold;
+    }
+
+    /* ---------------------------------------------
+       5) TITULO, BOTÓN DE AJUSTES Y PANEL MAESTRO
+    ----------------------------------------------*/
+    .brand-title-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between; 
+      margin-bottom: 10px;
+    }
+
+    .brand-title {
+      flex: 1; 
+      text-align: center;
+      font-size: 1.3rem;
+      color: var(--primary-color);
+      background-color: rgba(52, 58, 64, 0.1);
+      padding: 8px 16px;
+      border-radius: 5px;
+      font-weight: bold;
+      margin: 0;
+    }
+
+    .brand-filters-panel {
+      display: none; /* Arranca oculto */
+      background-color: #fff;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 6px var(--shadow-color);
+    }
+
+    .brand-filters-panel.show {
+      display: block; /* Se muestra cuando toggles */
+    }
+
+    .filters-group {
+      margin-bottom: 10px;
+    }
+
+    .filters-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+
+    .filters-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .btn-move-up, .btn-move-down {
+      background-color: #6c757d;
+      border: none;
+      color: #fff;
+      padding: 4px 8px;
+      font-size: 0.8rem;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn-move-up:hover, .btn-move-down:hover {
+      background-color: #5a6268;
+    }
+
+    /* Panel maestro para mostrar/ocultar y reordenar marcas */
+    #brandMasterPanelContainer {
+      margin-bottom: 20px;
+    }
+
+    #brandMasterPanel {
+      margin-top: 10px;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px var(--shadow-color);
+      background-color: #fff;
+      display: none; /* Oculto inicialmente */
+    }
+
+    #brandListContainer .brand-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+      gap: 8px;
+    }
+
+    #brandListContainer label {
+      flex: 1;
+      margin: 0;
+      cursor: pointer;
+    }
+
+    /* ---------------------------------------------
+       Reordenar presentaciones (filas)
+    ----------------------------------------------*/
+    .presentation-reorder-group {
+      margin-top: 15px;
+      padding-top: 10px;
+      border-top: 1px solid #ccc;
+    }
+    .presentation-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 6px;
+      gap: 8px;
+    }
+    .presentation-item label {
+      flex: 1;
+      margin: 0;
+      cursor: pointer;
+    }
+
+    /* ---------------------------------------------
+       6) RESPONSIVIDAD
+    ----------------------------------------------*/
+    @media (max-width: 768px) {
+      th,
+      td {
+        padding: 8px;
+        font-size: 0.9rem;
+      }
+      .brand-title {
+        font-size: 1.2rem;
+      }
+    }
+
+    @media (max-width: 576px) {
+      th,
+      td {
+        padding: 6px;
+        font-size: 0.8rem;
+      }
+      .brand-title {
+        font-size: 1rem;
+      }
+    }
+  </style>
+</head>
+
+<!-- Script para recargar la página automáticamente cada 2 minutos -->
+<script>
+  setTimeout(() => {
+    location.reload();
+  }, 120000);
+</script>
+
+<body>
+  <div class="container-fluid container-custom">
+    <div class="scroll-wrapper">
+      <% if (organizedTables && Object.keys(organizedTables).length > 0) { %>
+
+        <!-- 
+          1) CONTENEDOR PRINCIPAL DEL PANEL MAESTRO
+             Incluye el botón para mostrar/ocultar
+        -->
+        <div id="brandMasterPanelContainer">
+          <button 
+            type="button" 
+            class="btn btn-secondary" 
+            id="toggleBrandMasterBtn"
+          >
+            Opciones de tablas generales
+          </button>
+
+          <div id="brandMasterPanel">
+            <h3>Opciones de Tablas Generales</h3>
+            <p>Selecciona qué marcas mostrar y el orden de visualización:</p>
+            <div id="brandListContainer"></div>
+          </div>
+        </div>
+
+        <!-- 
+          2) Contenedor donde se mostrarán las tablas de cada marca 
+             (lo reordenamos dinámicamente con JS)
+        -->
+        <div id="brandContainers">
+          <% 
+            // Recorremos cada "brand" en organizedTables
+          %>
+          <% for (const [brand, tables] of Object.entries(organizedTables)) { %>
+            <div class="brand-container" id="brandContainer_<%= brand %>">
+              <% 
+                // Obtenemos las presentaciones y sabores
+                const brandPresentationsSet = new Set();
+                const brandFlavorsSet = new Set();
+
+                for (const [presentation, flavorsObj] of Object.entries(tables)) {
+                  brandPresentationsSet.add(presentation);
+                  Object.keys(flavorsObj).forEach(flavor => brandFlavorsSet.add(flavor));
+                }
+
+                const brandPresentationsArray = Array.from(brandPresentationsSet).sort();
+                const brandFlavorsArray = Array.from(brandFlavorsSet).sort();
+              %>
+
+              <!-- Contenedor de título y botón de filtros -->
+              <div class="brand-title-container">
+                <h2 class="brand-title"><%= brand %></h2>
+                <button 
+                  type="button" 
+                  class="btn btn-sm btn-info toggle-filters-btn" 
+                  data-brand="<%= brand %>"
+                >
+                  Ajustes de tabla
+                </button>
+              </div>
+
+              <!-- Panel de filtros para esta marca -->
+              <div 
+                class="brand-filters-panel" 
+                id="filtersPanel_<%= brand %>"
+              >
+                <div class="filters-group">
+                  <label>Presentaciones (<%= brand %>):</label>
+                  <div class="filters-options" id="presentationsOptions_<%= brand %>"></div>
+                </div>
+                <div class="filters-group">
+                  <label>Sabores (<%= brand %>):</label>
+                  <div class="filters-options" id="flavorsOptions_<%= brand %>"></div>
+                </div>
+
+                <!-- Bloque para reordenar las presentaciones (filas) -->
+                <div class="presentation-reorder-group">
+                  <h5>Reordenar Presentaciones</h5>
+                  <div id="presentationReorderList_<%= brand %>"></div>
+                </div>
+              </div>
+
+              <!-- Contenedor de la tabla -->
+              <div class="table-container">
+                <div class="table-responsive">
+                  <table 
+                    class="table table-striped table-bordered" 
+                    id="table_<%= brand %>"
+                  >
+                    <thead>
+                      <tr>
+                        <th>Presentación</th>
+                        <% brandFlavorsArray.forEach(flavor => { %>
+                          <th data-flavor="<%= flavor %>"><%= flavor %></th>
+                        <% }) %>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <% for (const [presentation, flavorsObj] of Object.entries(tables)) { %>
+                        <tr data-presentation="<%= presentation %>">
+                          <td class="presentation-header"><%= presentation %></td>
+                          <% brandFlavorsArray.forEach(flavor => {
+                            const qty = Number(flavorsObj[flavor] || 0);
+                            let colorClass = '';
+                            if (qty < 1) colorClass = 'cell-red';
+                            else if (qty < 5) colorClass = 'cell-orange';
+                            else if (qty < 10) colorClass = 'cell-yellow';
+                            else colorClass = 'cell-green';
+                          %>
+                            <td 
+                              data-flavor="<%= flavor %>"
+                              class="<%= colorClass %>"
+                            >
+                              <%= qty %>
+                            </td>
+                          <% }) %>
+                        </tr>
+                      <% } %>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Script inline para filtros y reordenamiento de presentaciones -->
+              <script>
+                (function() {
+                  const brand = "<%= brand %>";
+                  const tableEl = document.getElementById("table_" + brand);
+                  const filtersPanel = document.getElementById("filtersPanel_" + brand);
+                  const toggleBtn = document.querySelector('.toggle-filters-btn[data-brand="' + brand + '"]');
+
+                  // Arrays de presentaciones y sabores
+                  const brandPresentationsArray = <%- JSON.stringify(brandPresentationsArray) %>;
+                  const brandFlavorsArray = <%- JSON.stringify(brandFlavorsArray) %>;
+
+                  // Contenedores
+                  const presentationsContainer = document.getElementById("presentationsOptions_" + brand);
+                  const flavorsContainer = document.getElementById("flavorsOptions_" + brand);
+                  const presentationReorderContainer = document.getElementById("presentationReorderList_" + brand);
+
+                  // LocalStorage keys
+                  const LS_PRESENTATIONS_KEY = "selectedPresentations_" + brand;
+                  const LS_FLAVORS_KEY = "selectedFlavors_" + brand;
+                  const LS_PRESENTATION_ORDER_KEY = "presentationOrder_" + brand;
+
+                  // 1) Crear checkboxes para presentaciones y sabores
+                  function createCheckbox(value, groupName) {
+                    const divCheck = document.createElement('div');
+                    divCheck.className = 'form-check';
+
+                    const input = document.createElement('input');
+                    input.type = 'checkbox';
+                    input.className = 'form-check-input';
+                    input.id = groupName + "_" + brand + "_" + value;
+                    input.value = value;
+                    input.checked = true;
+
+                    const label = document.createElement('label');
+                    label.className = 'form-check-label';
+                    label.htmlFor = input.id;
+                    label.textContent = value;
+
+                    divCheck.appendChild(input);
+                    divCheck.appendChild(label);
+                    return divCheck;
+                  }
+
+                  brandPresentationsArray.forEach(p => {
+                    presentationsContainer.appendChild(createCheckbox(p, "presentation"));
+                  });
+                  brandFlavorsArray.forEach(f => {
+                    flavorsContainer.appendChild(createCheckbox(f, "flavor"));
+                  });
+
+                  // 2) Leer LocalStorage (presentaciones/sabores)
+                  let selectedPresentations = JSON.parse(localStorage.getItem(LS_PRESENTATIONS_KEY)) || [];
+                  let selectedFlavors = JSON.parse(localStorage.getItem(LS_FLAVORS_KEY)) || [];
+
+                  if (selectedPresentations.length === 0) {
+                    selectedPresentations = [...brandPresentationsArray];
+                  }
+                  if (selectedFlavors.length === 0) {
+                    selectedFlavors = [...brandFlavorsArray];
+                  }
+
+                  function reflectSelections() {
+                    brandPresentationsArray.forEach(p => {
+                      const cbId = "presentation_" + brand + "_" + p;
+                      const cb = document.getElementById(cbId);
+                      if (cb) {
+                        cb.checked = selectedPresentations.includes(p);
+                      }
+                    });
+                    brandFlavorsArray.forEach(f => {
+                      const cbId = "flavor_" + brand + "_" + f;
+                      const cb = document.getElementById(cbId);
+                      if (cb) {
+                        cb.checked = selectedFlavors.includes(f);
+                      }
+                    });
+                  }
+                  reflectSelections();
+
+                  // Filtra la tabla según checkboxes
+                  function filterTable() {
+                    selectedPresentations = [];
+                    selectedFlavors = [];
+
+                    brandPresentationsArray.forEach(p => {
+                      const cbId = "presentation_" + brand + "_" + p;
+                      const cb = document.getElementById(cbId);
+                      if (cb && cb.checked) {
+                        selectedPresentations.push(p);
+                      }
+                    });
+                    brandFlavorsArray.forEach(f => {
+                      const cbId = "flavor_" + brand + "_" + f;
+                      const cb = document.getElementById(cbId);
+                      if (cb && cb.checked) {
+                        selectedFlavors.push(f);
+                      }
+                    });
+
+                    localStorage.setItem(LS_PRESENTATIONS_KEY, JSON.stringify(selectedPresentations));
+                    localStorage.setItem(LS_FLAVORS_KEY, JSON.stringify(selectedFlavors));
+
+                    // Ocultar/mostrar filas (presentaciones)
+                    const allRows = tableEl.querySelectorAll("tbody tr[data-presentation]");
+                    allRows.forEach(row => {
+                      const pres = row.getAttribute("data-presentation") || "";
+                      row.style.display = selectedPresentations.includes(pres) ? "" : "none";
+                    });
+
+                    // Ocultar/mostrar columnas (sabores)
+                    const allFlavorTh = tableEl.querySelectorAll("thead th[data-flavor]");
+                    allFlavorTh.forEach(th => {
+                      const flavor = th.getAttribute("data-flavor");
+                      const colIndex = th.cellIndex; 
+                      if (selectedFlavors.includes(flavor)) {
+                        showColumn(colIndex);
+                      } else {
+                        hideColumn(colIndex);
+                      }
+                    });
+                  }
+
+                  function hideColumn(colIndex) {
+                    const rows = tableEl.rows;
+                    for (let i = 0; i < rows.length; i++) {
+                      if (rows[i].cells[colIndex]) {
+                        rows[i].cells[colIndex].style.display = 'none';
+                      }
+                    }
+                  }
+
+                  function showColumn(colIndex) {
+                    const rows = tableEl.rows;
+                    for (let i = 0; i < rows.length; i++) {
+                      if (rows[i].cells[colIndex]) {
+                        rows[i].cells[colIndex].style.display = '';
+                      }
+                    }
+                  }
+
+                  // Adjuntar evento 'change' a los checkboxes
+                  function attachCheckboxEvents() {
+                    brandPresentationsArray.forEach(p => {
+                      const cbId = "presentation_" + brand + "_" + p;
+                      const cb = document.getElementById(cbId);
+                      if (cb) cb.addEventListener('change', filterTable);
+                    });
+                    brandFlavorsArray.forEach(f => {
+                      const cbId = "flavor_" + brand + "_" + f;
+                      const cb = document.getElementById(cbId);
+                      if (cb) cb.addEventListener('change', filterTable);
+                    });
+                  }
+                  attachCheckboxEvents();
+                  filterTable();
+
+                  // 3) Reordenar presentaciones (filas)
+                  let presentationOrder = JSON.parse(localStorage.getItem(LS_PRESENTATION_ORDER_KEY)) || [];
+                  if (presentationOrder.length !== brandPresentationsArray.length) {
+                    presentationOrder = [...brandPresentationsArray];
+                  }
+
+                  function renderPresentationReorderList() {
+                    presentationReorderContainer.innerHTML = "";
+                    presentationOrder.forEach((pres, index) => {
+                      const item = document.createElement("div");
+                      item.className = "presentation-item";
+
+                      const label = document.createElement("label");
+                      label.textContent = pres;
+
+                      const btnUp = document.createElement("button");
+                      btnUp.type = "button";
+                      btnUp.className = "btn-move-up";
+                      btnUp.textContent = "↑";
+                      btnUp.addEventListener('click', () => movePresentationUp(pres));
+
+                      const btnDown = document.createElement("button");
+                      btnDown.type = "button";
+                      btnDown.className = "btn-move-down";
+                      btnDown.textContent = "↓";
+                      btnDown.addEventListener('click', () => movePresentationDown(pres));
+
+                      item.appendChild(label);
+                      item.appendChild(btnUp);
+                      item.appendChild(btnDown);
+
+                      presentationReorderContainer.appendChild(item);
+                    });
+                  }
+
+                  function movePresentationUp(pres) {
+                    const idx = presentationOrder.indexOf(pres);
+                    if (idx > 0) {
+                      [presentationOrder[idx - 1], presentationOrder[idx]] =
+                        [presentationOrder[idx], presentationOrder[idx - 1]];
+                      localStorage.setItem(LS_PRESENTATION_ORDER_KEY, JSON.stringify(presentationOrder));
+                      reorderTableRows();
+                      renderPresentationReorderList();
+                    }
+                  }
+
+                  function movePresentationDown(pres) {
+                    const idx = presentationOrder.indexOf(pres);
+                    if (idx < presentationOrder.length - 1) {
+                      [presentationOrder[idx + 1], presentationOrder[idx]] =
+                        [presentationOrder[idx], presentationOrder[idx + 1]];
+                      localStorage.setItem(LS_PRESENTATION_ORDER_KEY, JSON.stringify(presentationOrder));
+                      reorderTableRows();
+                      renderPresentationReorderList();
+                    }
+                  }
+
+                  function reorderTableRows() {
+                    const tbody = tableEl.querySelector("tbody");
+                    if (!tbody) return;
+
+                    const rowMap = {};
+                    const rows = tbody.querySelectorAll("tr[data-presentation]");
+                    rows.forEach(row => {
+                      const pres = row.getAttribute("data-presentation");
+                      rowMap[pres] = row;
+                    });
+
+                    // Vaciar y reinsertar según orden
+                    presentationOrder.forEach(pres => {
+                      if (rowMap[pres]) {
+                        tbody.appendChild(rowMap[pres]);
+                      }
+                    });
+                  }
+
+                  reorderTableRows();
+                  renderPresentationReorderList();
+
+                  // 4) Botón para mostrar/ocultar el panel de filtros
+                  toggleBtn.addEventListener('click', () => {
+                    filtersPanel.classList.toggle("show");
+                  });
+                })();
+              </script>
+            </div> <!-- fin .brand-container -->
+          <% } %>
+        </div> <!-- fin #brandContainers -->
+
+        <!-- 
+          3) Script para mostrar/ocultar y reordenar la lista de "marcas"
+        -->
+        <script>
+          (function() {
+            const brandOrderKey = "brandOrder_v2";
+            const brandVisibilityKey = "brandVisibility_v2";
+            const brandContainersEl = document.getElementById("brandContainers");
+            const toggleBrandMasterBtn = document.getElementById("toggleBrandMasterBtn");
+            const brandMasterPanel = document.getElementById("brandMasterPanel");
+
+            const allBrandIds = [];
+            <%
+              // Obtenemos las marcas desde el backend
+              const brandKeys = Object.keys(organizedTables);
+            %>
+            const brandKeys = <%- JSON.stringify(brandKeys) %>;
+            brandKeys.forEach(brandId => {
+              allBrandIds.push(brandId);
+            });
+
+            // Leemos orden de marcas
+            let savedOrder = JSON.parse(localStorage.getItem(brandOrderKey)) || [];
+            if (savedOrder.length !== allBrandIds.length) {
+              savedOrder = [...allBrandIds];
+            }
+
+            // Visibilidad de marcas
+            let savedVisibility = JSON.parse(localStorage.getItem(brandVisibilityKey)) || {};
+            allBrandIds.forEach(brandId => {
+              if (typeof savedVisibility[brandId] === 'undefined') {
+                savedVisibility[brandId] = true;
+              }
+            });
+
+            // Construir interfaz de reorden y checkboxes
+            const brandListContainer = document.getElementById("brandListContainer");
+            function renderBrandList() {
+              brandListContainer.innerHTML = "";
+              savedOrder.forEach((brandId, index) => {
+                const brandItem = document.createElement("div");
+                brandItem.className = "brand-item";
+
+                const checkbox = document.createElement("input");
+                checkbox.type = "checkbox";
+                checkbox.id = "brandCheck_" + brandId;
+                checkbox.checked = savedVisibility[brandId];
+                checkbox.addEventListener('change', () => {
+                  savedVisibility[brandId] = checkbox.checked;
+                  updateVisibility();
+                  localStorage.setItem(brandVisibilityKey, JSON.stringify(savedVisibility));
+                });
+
+                const label = document.createElement("label");
+                label.htmlFor = checkbox.id;
+                label.textContent = brandId;
+
+                const btnUp = document.createElement("button");
+                btnUp.type = "button";
+                btnUp.className = "btn-move-up";
+                btnUp.textContent = "↑";
+                btnUp.addEventListener('click', () => moveBrandUp(brandId));
+
+                const btnDown = document.createElement("button");
+                btnDown.type = "button";
+                btnDown.className = "btn-move-down";
+                btnDown.textContent = "↓";
+                btnDown.addEventListener('click', () => moveBrandDown(brandId));
+
+                brandItem.appendChild(checkbox);
+                brandItem.appendChild(label);
+                brandItem.appendChild(btnUp);
+                brandItem.appendChild(btnDown);
+                brandListContainer.appendChild(brandItem);
+              });
+            }
+
+            function moveBrandUp(brandId) {
+              const idx = savedOrder.indexOf(brandId);
+              if (idx > 0) {
+                [savedOrder[idx - 1], savedOrder[idx]] = [savedOrder[idx], savedOrder[idx - 1]];
+                localStorage.setItem(brandOrderKey, JSON.stringify(savedOrder));
+                reorderDOM();
+                renderBrandList();
+              }
+            }
+
+            function moveBrandDown(brandId) {
+              const idx = savedOrder.indexOf(brandId);
+              if (idx < savedOrder.length - 1) {
+                [savedOrder[idx + 1], savedOrder[idx]] = [savedOrder[idx], savedOrder[idx + 1]];
+                localStorage.setItem(brandOrderKey, JSON.stringify(savedOrder));
+                reorderDOM();
+                renderBrandList();
+              }
+            }
+
+            function reorderDOM() {
+              savedOrder.forEach(brandId => {
+                const container = document.getElementById("brandContainer_" + brandId);
+                if (container) {
+                  brandContainersEl.appendChild(container);
+                }
+              });
+            }
+
+            function updateVisibility() {
+              allBrandIds.forEach(brandId => {
+                const container = document.getElementById("brandContainer_" + brandId);
+                if (container) {
+                  container.style.display = savedVisibility[brandId] ? "" : "none";
+                }
+              });
+            }
+
+            reorderDOM();
+            updateVisibility();
+            renderBrandList();
+
+            toggleBrandMasterBtn.addEventListener("click", () => {
+              if (brandMasterPanel.style.display === "none") {
+                brandMasterPanel.style.display = "block";
+              } else {
+                brandMasterPanel.style.display = "none";
+              }
+            });
+          })();
+        </script>
+
+      <% } else { %>
+        <p class="text-center">No hay productos disponibles en el inventario.</p>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- ===== Bootstrap JS ===== -->
+  <script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+  ></script>
+</body>
+</html>

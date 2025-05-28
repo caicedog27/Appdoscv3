@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title><%= title %></title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Bootstrap CSS v5 -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+  <style>
+    body {
+      background-color: #f1f1f1;
+    }
+    .container-custom {
+      padding: 10px 15px;
+      min-height: 100vh;
+    }
+    .scroll-wrapper {
+      padding: 20px;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    table thead th {
+      background-color: #343a40;
+      color: #fff;
+    }
+    .btn-remove-line {
+      background-color: #dc3545;
+      color: #fff;
+      border: none;
+      padding: 5px 8px;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    .btn-remove-line:hover {
+      background-color: #c82333;
+    }
+    .btn-add-line {
+      background-color: #28a745;
+      color: #fff;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 5px;
+      margin-top: 10px;
+    }
+    .btn-add-line:hover {
+      background-color: #218838;
+    }
+    .floating-suggestions {
+      position: fixed;
+      z-index: 9999;
+      background-color: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    /* Modal custom styles */
+    .modal-header {
+      background-color: #343a40;
+      color: #fff;
+    }
+    .modal-body > .calc-section {
+      display: none; /* se muestran condicionalmente según tipo de conversión */
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container-fluid container-custom">
+    <div class="scroll-wrapper">
+      <h1><%= title %></h1>
+
+      <!-- FORM principal -->
+      <form action="/purchase" method="POST" id="purchaseForm">
+        <!-- FECHA DE LA ORDEN -->
+        <div class="mb-3">
+          <label for="orderDate" class="form-label">Fecha de la Orden</label>
+          <input
+            type="date"
+            name="orderDate"
+            id="orderDate"
+            class="form-control"
+            value="<%= new Date().toISOString().split('T')[0] %>"
+            required
+          />
+        </div>
+
+        <!-- BÚSQUEDA DE PROVEEDOR -->
+        <div class="mb-3">
+          <label for="providerSearch" class="form-label">Buscar Proveedor</label>
+          <input
+            type="text"
+            id="providerSearch"
+            class="form-control"
+            placeholder="Escriba nombre o identificación..."
+          />
+          <input type="hidden" name="providerId" id="providerId" />
+          <input type="hidden" name="providerName" id="providerName" />
+        </div>
+        <div class="mb-3">
+          <label for="providerRUT" class="form-label">RUT / NIT</label>
+          <input type="text" name="providerRUT" id="providerRUT" class="form-control" readonly />
+        </div>
+        <div class="mb-3">
+          <label for="providerAddress" class="form-label">Dirección Proveedor</label>
+          <input type="text" name="providerAddress" id="providerAddress" class="form-control" readonly />
+        </div>
+        <div class="mb-3">
+          <label for="providerPhone" class="form-label">Teléfono Proveedor</label>
+          <input type="text" name="providerPhone" id="providerPhone" class="form-control" readonly />
+        </div>
+
+        <!-- TABLA DE ÍTEMS -->
+        <div class="table-responsive">
+          <table class="table table-bordered align-middle" id="itemsTable">
+            <thead>
+              <tr>
+                <th>Producto (búsqueda)</th>
+                <th>Código</th>
+                <th>Unidad</th>
+                <th>Disponible</th>
+                <th>Cantidad</th>
+                <th>Calculadora</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Fila inicial (index=0) -->
+              <tr data-row-index="0">
+                <!-- (1) PRODUCTO (búsqueda) -->
+                <td>
+                  <input
+                    type="text"
+                    class="form-control productSearchInput"
+                    placeholder="Buscar producto..."
+                  />
+                  <input type="hidden" name="items[0][productId]" class="productIdField" />
+                </td>
+                <!-- (2) Código -->
+                <td>
+                  <input
+                    type="text"
+                    name="items[0][code]"
+                    class="form-control productCodeField"
+                    readonly
+                  />
+                </td>
+                <!-- (3) Unidad -->
+                <td>
+                  <input
+                    type="text"
+                    name="items[0][unitName]"
+                    class="form-control productUnitNameField"
+                    readonly
+                  />
+                </td>
+                <!-- (4) Disponible -->
+                <td>
+                  <input
+                    type="text"
+                    name="items[0][availableQty]"
+                    class="form-control productAvailableQtyField"
+                    readonly
+                  />
+                </td>
+                <!-- (5) Cantidad -->
+                <td>
+                  <input
+                    type="number"
+                    name="items[0][quantity]"
+                    class="form-control item-quantity"
+                    min="0"
+                    step="0.01"
+                    value="0"
+                  />
+                </td>
+                <!-- (6) Botón Calc => abre modal -->
+                <td>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-info openCalcBtn"
+                  >
+                    Calc
+                  </button>
+                </td>
+                <!-- (7) Eliminar -->
+                <td>
+                  <button
+                    type="button"
+                    class="btn-remove-line"
+                    onclick="removeLine(this)"
+                  >
+                    X
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- BOTÓN PARA AÑADIR FILAS -->
+        <button type="button" class="btn-add-line" id="addLineBtn">
+          Añadir Producto
+        </button>
+
+        <!-- NOTAS -->
+        <div class="mb-3 mt-3">
+          <label for="notes" class="form-label">Notas</label>
+          <textarea name="notes" id="notes" rows="3" class="form-control"></textarea>
+        </div>
+
+        <!-- BOTÓN GUARDAR -->
+        <button type="submit" class="btn btn-primary">
+          Guardar Orden
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL CALCULADORA AVANZADA -->
+  <div class="modal fade" id="calcModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+
+        <div class="modal-header">
+          <h5 class="modal-title">Calculadora Avanzada</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Almacenar rowIndex y la unidad si se requiere -->
+          <input type="hidden" id="calc-rowIndex" />
+          <input type="hidden" id="calc-rowUnit" />
+
+          <!-- Selección de modo -->
+          <div class="mb-3">
+            <label class="form-label">Tipo de conversión</label>
+            <select id="calc-mode" class="form-select">
+              <option value="">-- Seleccione --</option>
+              <option value="bultos">Bultos → Kilos → Gramos</option>
+              <option value="ml">ml → Gramos (requiere densidad)</option>
+              <option value="litros">Litros → Gramos (densidad)</option>
+              <!-- Añade más modos según tu necesidad -->
+            </select>
+          </div>
+
+          <!-- Sección: BULTOS->Kilos->Gramos -->
+          <div class="calc-section" id="calc-bultos-section">
+            <div class="mb-3">
+              <label for="calc-bultos" class="form-label">Número de bultos</label>
+              <input type="number" id="calc-bultos" class="form-control" step="0.01" min="0" placeholder="Ej: 2 bultos" />
+            </div>
+            <div class="mb-3">
+              <label for="calc-bulto-kilos" class="form-label">Kilos por bulto</label>
+              <input type="number" id="calc-bulto-kilos" class="form-control" step="0.01" min="0" placeholder="Ej: 25 kg/bulto" />
+            </div>
+          </div>
+
+          <!-- Sección: ml->g (densidad) -->
+          <div class="calc-section" id="calc-ml-section">
+            <div class="mb-3">
+              <label for="calc-ml" class="form-label">ml totales</label>
+              <input type="number" id="calc-ml" class="form-control" step="0.01" min="0" placeholder="Ej: 500 ml" />
+            </div>
+            <div class="mb-3">
+              <label for="calc-density" class="form-label">Densidad (g/ml)</label>
+              <input type="number" id="calc-density" class="form-control" step="0.01" min="0" placeholder="Ej: 1.05 g/ml" />
+            </div>
+          </div>
+
+          <!-- Sección: Litros->g (densidad) -->
+          <div class="calc-section" id="calc-litros-section">
+            <div class="mb-3">
+              <label for="calc-litros" class="form-label">Litros totales</label>
+              <input type="number" id="calc-litros" class="form-control" step="0.01" min="0" placeholder="Ej: 3.5 L" />
+            </div>
+            <div class="mb-3">
+              <label for="calc-litros-density" class="form-label">Densidad (g/ml)</label>
+              <input type="number" id="calc-litros-density" class="form-control" step="0.01" min="0" placeholder="Ej: 1.02 g/ml" />
+            </div>
+          </div>
+
+          <!-- RESULTADO -->
+          <div class="mb-3">
+            <label>Resultado (unidades que se guardarán en Cantidad):</label>
+            <input type="number" id="calc-result" class="form-control" step="0.01" min="0" value="0" readonly />
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="calc-calculateBtn">
+            Calcular
+          </button>
+          <button type="button" class="btn btn-primary" id="calc-applyBtn" data-bs-dismiss="modal">
+            Aplicar
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+  <!-- /MODAL -->
+
+  <!-- Bootstrap JS (v5) -->
+  <script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+  ></script>
+
+  <script>
+    /******************************************************
+     * 1) EVITAR ENTER EN CAMPOS DE BÚSQUEDA
+     ******************************************************/
+    document.addEventListener('keydown', (e) => {
+      const el = e.target;
+      if (
+        (el.matches('.productSearchInput') || el.matches('#providerSearch'))
+        && e.key === 'Enter'
+      ) {
+        e.preventDefault();
+      }
+    });
+
+    /******************************************************
+     * 2) PROVEEDOR: LIMPIAR AL CAMBIAR
+     ******************************************************/
+    const providerSearchInput = document.getElementById('providerSearch');
+    const providerIdField     = document.getElementById('providerId');
+    const providerNameField   = document.getElementById('providerName');
+    const providerRUT         = document.getElementById('providerRUT');
+    const providerAddress     = document.getElementById('providerAddress');
+    const providerPhone       = document.getElementById('providerPhone');
+
+    let providerBox = null;
+    providerSearchInput.addEventListener('focus', () => {
+      providerBox = document.createElement('div');
+      providerBox.className = 'list-group floating-suggestions';
+      document.body.appendChild(providerBox);
+
+      positionProviderBox();
+      window.addEventListener('resize', positionProviderBox);
+      window.addEventListener('scroll', positionProviderBox, true);
+    });
+
+    providerSearchInput.addEventListener('blur', () => {
+      setTimeout(() => {
+        if (providerBox) {
+          providerBox.remove();
+          providerBox = null;
+        }
+      }, 200);
+    });
+
+    providerSearchInput.addEventListener('input', async () => {
+      // Limpiar
+      providerIdField.value   = '';
+      providerNameField.value = '';
+      providerRUT.value       = '';
+      providerAddress.value   = '';
+      providerPhone.value     = '';
+
+      const q = providerSearchInput.value.trim();
+      if (q.length < 2) {
+        if (providerBox) providerBox.innerHTML = '';
+        return;
+      }
+      // Llamada AJAX
+      const resp = await fetch(`/purchase/search/providers?q=${encodeURIComponent(q)}`);
+      const data = await resp.json();
+      if (!data.success) return;
+
+      if (providerBox) providerBox.innerHTML = '';
+      data.data.forEach(prov => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'list-group-item list-group-item-action';
+        btn.textContent = `${prov.identification} - ${prov.name}`;
+
+        btn.addEventListener('click', () => {
+          providerIdField.value   = prov.id;
+          providerNameField.value = prov.name;
+          providerRUT.value       = prov.identification;
+          providerAddress.value   = prov.address?.address || '';
+          providerPhone.value     = (prov.phones && prov.phones[0]) ? prov.phones[0].number : '';
+          providerSearchInput.value = prov.name;
+
+          if (providerBox) providerBox.innerHTML = '';
+        });
+        if (providerBox) providerBox.appendChild(btn);
+      });
+    });
+
+    function positionProviderBox() {
+      if (!providerBox) return;
+      const rect = providerSearchInput.getBoundingClientRect();
+      providerBox.style.top  = rect.bottom + 'px';
+      providerBox.style.left = rect.left + 'px';
+      providerBox.style.width= rect.width + 'px';
+    }
+
+    /******************************************************
+     * 3) PRODUCTOS: LIMPIAR AL CAMBIAR
+     ******************************************************/
+    function attachProductSearchEvents(row) {
+      const searchInput      = row.querySelector('.productSearchInput');
+      const productIdField   = row.querySelector('.productIdField');
+      const codeField        = row.querySelector('.productCodeField');
+      const unitNameField    = row.querySelector('.productUnitNameField');
+      const availableQtyField= row.querySelector('.productAvailableQtyField');
+
+      let productBox = null;
+
+      searchInput.addEventListener('focus', () => {
+        productBox = document.createElement('div');
+        productBox.className = 'list-group floating-suggestions';
+        document.body.appendChild(productBox);
+
+        positionProductBox();
+        window.addEventListener('resize', positionProductBox);
+        window.addEventListener('scroll', positionProductBox, true);
+      });
+
+      searchInput.addEventListener('blur', () => {
+        setTimeout(() => {
+          if (productBox) {
+            productBox.remove();
+            productBox = null;
+          }
+        }, 200);
+      });
+
+      searchInput.addEventListener('input', async () => {
+        // Limpiar
+        productIdField.value   = '';
+        codeField.value        = '';
+        unitNameField.value    = '';
+        availableQtyField.value= '';
+
+        const q = searchInput.value.trim();
+        if (q.length < 2) {
+          if (productBox) productBox.innerHTML = '';
+          return;
+        }
+        // Llamada AJAX
+        const resp = await fetch(`/purchase/search/products?q=${encodeURIComponent(q)}`);
+        const data = await resp.json();
+        if (!data.success) return;
+
+        if (productBox) productBox.innerHTML = '';
+        data.data.forEach(prod => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'list-group-item list-group-item-action';
+          btn.textContent = `${prod.code} - ${prod.name}`;
+
+          btn.addEventListener('click', () => {
+            productIdField.value    = prod.id;
+            searchInput.value       = prod.name;
+            codeField.value         = prod.code || '';
+            unitNameField.value     = prod.unit?.name || '';
+            availableQtyField.value = prod.available_quantity || '';
+
+            if (productBox) productBox.innerHTML = '';
+          });
+          if (productBox) productBox.appendChild(btn);
+        });
+      });
+
+      function positionProductBox() {
+        if (!productBox) return;
+        const rect = searchInput.getBoundingClientRect();
+        productBox.style.top  = rect.bottom + 'px';
+        productBox.style.left = rect.left + 'px';
+        productBox.style.width= rect.width + 'px';
+      }
+    }
+
+    // Fila inicial (index=0)
+    const firstRow = document.querySelector('tr[data-row-index="0"]');
+    attachProductSearchEvents(firstRow);
+
+    /******************************************************
+     * 4) AÑADIR FILAS DINÁMICAMENTE
+     ******************************************************/
+    let currentIndex = 1;
+    const itemsTable = document.getElementById('itemsTable');
+    const addLineBtn = document.getElementById('addLineBtn');
+
+    addLineBtn.addEventListener('click', () => {
+      const tbody = itemsTable.querySelector('tbody');
+      const newRow = document.createElement('tr');
+      newRow.setAttribute('data-row-index', currentIndex);
+
+      newRow.innerHTML = `
+        <td>
+          <input
+            type="text"
+            class="form-control productSearchInput"
+            placeholder="Buscar producto..."
+          />
+          <input type="hidden" name="items[${currentIndex}][productId]" class="productIdField" />
+        </td>
+        <td>
+          <input
+            type="text"
+            name="items[${currentIndex}][code]"
+            class="form-control productCodeField"
+            readonly
+          />
+        </td>
+        <td>
+          <input
+            type="text"
+            name="items[${currentIndex}][unitName]"
+            class="form-control productUnitNameField"
+            readonly
+          />
+        </td>
+        <td>
+          <input
+            type="text"
+            name="items[${currentIndex}][availableQty]"
+            class="form-control productAvailableQtyField"
+            readonly
+          />
+        </td>
+        <td>
+          <input
+            type="number"
+            name="items[${currentIndex}][quantity]"
+            class="form-control item-quantity"
+            min="0"
+            step="0.01"
+            value="0"
+          />
+        </td>
+        <td>
+          <button
+            type="button"
+            class="btn btn-sm btn-info openCalcBtn"
+          >
+            Calc
+          </button>
+        </td>
+        <td>
+          <button
+            type="button"
+            class="btn-remove-line"
+            onclick="removeLine(this)"
+          >
+            X
+          </button>
+        </td>
+      `;
+
+      tbody.appendChild(newRow);
+      attachProductSearchEvents(newRow);
+      currentIndex++;
+    });
+
+    function removeLine(btn) {
+      btn.closest('tr').remove();
+    }
+
+    /******************************************************
+     * 5) CALCULADORA AVANZADA (MODAL)
+     ******************************************************/
+    const calcModal        = document.getElementById('calcModal');
+    const calcModalObj     = new bootstrap.Modal(calcModal, { keyboard: false });
+    const calcRowIndexEl   = document.getElementById('calc-rowIndex');
+    const calcRowUnitEl    = document.getElementById('calc-rowUnit');
+    const calcModeEl       = document.getElementById('calc-mode');
+
+    const calcBultosSec    = document.getElementById('calc-bultos-section');
+    const calcMLSec        = document.getElementById('calc-ml-section');
+    const calcLitrosSec    = document.getElementById('calc-litros-section');
+
+    const calcBultosEl     = document.getElementById('calc-bultos');
+    const calcBultoKilosEl = document.getElementById('calc-bulto-kilos');
+    const calcMLEl         = document.getElementById('calc-ml');
+    const calcDensityEl    = document.getElementById('calc-density');
+    const calcLitrosEl     = document.getElementById('calc-litros');
+    const calcLitrosDenEl  = document.getElementById('calc-litros-density');
+
+    const calcResultEl     = document.getElementById('calc-result');
+    const calcCalculateBtn = document.getElementById('calc-calculateBtn');
+    const calcApplyBtn     = document.getElementById('calc-applyBtn');
+
+    // Mostrar/ocultar secciones según modo
+    calcModeEl.addEventListener('change', () => {
+      const mode = calcModeEl.value;
+      // Ocultar todo
+      calcBultosSec.style.display = 'none';
+      calcMLSec.style.display     = 'none';
+      calcLitrosSec.style.display = 'none';
+      calcResultEl.value          = '0';
+
+      if (mode === 'bultos') {
+        calcBultosSec.style.display = '';
+      } else if (mode === 'ml') {
+        calcMLSec.style.display = '';
+      } else if (mode === 'litros') {
+        calcLitrosSec.style.display = '';
+      }
+    });
+
+    // Botón "Calcular"
+    calcCalculateBtn.addEventListener('click', () => {
+      const mode = calcModeEl.value;
+      let result = 0;
+
+      if (mode === 'bultos') {
+        const bultos     = parseFloat(calcBultosEl.value) || 0;
+        const kilosBulto = parseFloat(calcBultoKilosEl.value) || 0;
+        // total grams
+        result = bultos * (kilosBulto * 1000);
+      } else if (mode === 'ml') {
+        const ml       = parseFloat(calcMLEl.value)    || 0;
+        const density  = parseFloat(calcDensityEl.value) || 0;
+        // gr = ml * densidad
+        result = ml * density;
+      } else if (mode === 'litros') {
+        const litros = parseFloat(calcLitrosEl.value)  || 0;
+        const den    = parseFloat(calcLitrosDenEl.value) || 0;
+        // 1 litro => 1000 ml => g = ml * densidad
+        const totalMl = litros * 1000;
+        result = totalMl * den;
+      }
+      calcResultEl.value = result.toFixed(2);
+    });
+
+    // Botón "Aplicar" => copia el "calcResultEl" en la fila
+    calcApplyBtn.addEventListener('click', () => {
+      const rowIndex = calcRowIndexEl.value;
+      const result   = parseFloat(calcResultEl.value) || 0;
+
+      // Buscar la fila
+      const row = document.querySelector(`tr[data-row-index="${rowIndex}"]`);
+      if (!row) return;
+
+      const qtyEl = row.querySelector('.item-quantity');
+      if (qtyEl) {
+        qtyEl.value = result.toFixed(2);
+      }
+    });
+
+    // Al hacer clic en "Calc" => abrir el modal
+    itemsTable.addEventListener('click', (e) => {
+      if (e.target.matches('.openCalcBtn')) {
+        const row = e.target.closest('tr');
+        if (!row) return;
+
+        const rowIndex = row.getAttribute('data-row-index');
+        calcRowIndexEl.value = rowIndex || '';
+
+        // Podrías leer la unidad, si deseas (calcRowUnitEl.value = ...)
+        // Reset modal
+        calcModeEl.value       = '';
+        calcBultosSec.style.display = 'none';
+        calcMLSec.style.display     = 'none';
+        calcLitrosSec.style.display = 'none';
+
+        calcBultosEl.value     = '';
+        calcBultoKilosEl.value = '';
+        calcMLEl.value         = '';
+        calcDensityEl.value    = '';
+        calcLitrosEl.value     = '';
+        calcLitrosDenEl.value  = '';
+        calcResultEl.value     = '0';
+
+        const bsModal = new bootstrap.Modal(calcModal, { keyboard: false });
+        bsModal.show();
+      }
+    });
+  </script>
+</body>
+</html>

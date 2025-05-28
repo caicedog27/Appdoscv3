@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        .container {
+            padding: 20px;
+            max-width: 100%;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            animation: fadeIn 0.8s ease-in-out;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #dee2e6;
+            background-color: #f8f9fa;
+        }
+
+        .table th, .table td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #dee2e6;
+            white-space: nowrap;
+        }
+
+        .table th {
+            background-color: #343a40;
+            color: #fff;
+        }
+
+        .table-striped tbody tr:nth-of-type(odd) {
+            background-color: #f2f2f2;
+        }
+
+        .dropdown-menu {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><%= title %></h1>
+        
+        <!-- Controles: buscador y selector de columnas -->
+        <div class="controls">
+            <input type="text" id="searchInput" class="form-control" placeholder="Buscar en la tabla..." style="max-width: 300px;">
+            <div class="dropdown">
+                <button class="btn btn-secondary dropdown-toggle" type="button" id="columnSelector" data-bs-toggle="dropdown" aria-expanded="false">
+                    Seleccionar columnas
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="columnSelector">
+                    <% const columns = [
+                        'ID', 'Código', 'Nombre', 'Tipo', 'Control de Stock', 'Cantidad Disponible', 
+                        'Almacenes', 'Unidad', 'Etiqueta Unidad', 'Referencia', 'Descripción', 
+                        'Grupo Contable', 'Impuestos', 'Precios', 'Campos Adicionales', 
+                        'Clasificación de Impuestos', 'Activo'
+                    ]; %>
+                    <% columns.forEach((col, index) => { %>
+                        <li>
+                            <div class="form-check">
+                                <input class="form-check-input column-toggle" type="checkbox" id="col-<%= index %>" data-col-index="<%= index %>" checked>
+                                <label class="form-check-label" for="col-<%= index %>"><%= col %></label>
+                            </div>
+                        </li>
+                    <% }) %>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Tabla de inventario -->
+        <% if (products.length > 0) { %>
+            <div class="table-container">
+                <table id="inventoryTable" class="table table-striped table-bordered">
+                    <thead class="thead-dark">
+                        <tr>
+                            <% columns.forEach(col => { %>
+                                <th><%= col %></th>
+                            <% }) %>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% products.forEach(product => { %>
+                            <tr>
+                                <td><%= product.id %></td>
+                                <td><%= product.code %></td>
+                                <td><%= product.name %></td>
+                                <td><%= product.type %></td>
+                                <td><%= product.stock_control %></td>
+                                <td><%= product.available_quantity %></td>
+                                <td><%= product.warehouse_names %></td>
+                                <td><%= product.unit %></td>
+                                <td><%= product.unit_label %></td>
+                                <td><%= product.reference %></td>
+                                <td><%= product.description %></td>
+                                <td><%= product.account_group %></td>
+                                <td><%= product.taxes %></td>
+                                <td><%= product.prices %></td>
+                                <td><%= product.additional_fields %></td>
+                                <td><%= product.tax_classification %></td>
+                                <td><%= product.active %></td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="mt-4 text-center">Total de productos: <%= totalProducts %></p>
+        <% } else { %>
+            <p class="text-center">No hay productos disponibles en el inventario.</p>
+        <% } %>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Script para el buscador en tiempo real -->
+    <script>
+        document.getElementById('searchInput').addEventListener('input', function() {
+            const filter = this.value.toLowerCase();
+            const rows = document.querySelectorAll('#inventoryTable tbody tr');
+
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                const rowText = Array.from(cells).map(cell => cell.textContent.toLowerCase()).join(' ');
+                row.style.display = rowText.includes(filter) ? '' : 'none';
+            });
+        });
+
+        // Script para seleccionar columnas
+        document.querySelectorAll('.column-toggle').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const colIndex = this.getAttribute('data-col-index');
+                const cells = document.querySelectorAll(`#inventoryTable th:nth-child(${+colIndex + 1}), #inventoryTable td:nth-child(${+colIndex + 1})`);
+
+                cells.forEach(cell => {
+                    cell.style.display = this.checked ? '' : 'none';
+                });
+            });
+        });
+    </script>
+</body>
+</html>
