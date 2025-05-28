@@ -46,6 +46,52 @@ async function exchangeCode(code) {
     grant_type: 'authorization_code'
   });
 
+  const params = new URLSearchParams({
+    code,
+    client_id: GOOGLE_CLIENT_ID,
+    client_secret: GOOGLE_CLIENT_SECRET,
+    redirect_uri: 'postmessage',
+    grant_type: 'authorization_code'
+  });
+  try {
+    const { data } = await axios.post(
+      'https://oauth2.googleapis.com/token',
+      params.toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
+    return data; /* { id_token, access_token, refresh_token?, ... } */
+  } catch (err) {
+    console.error('Token exchange failed:', err.response?.data || err.message);
+    throw err;
+  }
+}
+
+async function exchangeCode(code) {
+
+async function exchangeCode(code) {
+
+  const params = new URLSearchParams({
+    code,
+    client_id: GOOGLE_CLIENT_ID,
+    client_secret: GOOGLE_CLIENT_SECRET,
+    redirect_uri: 'postmessage',
+    grant_type: 'authorization_code'
+  });
+
+  try {
+    const { data } = await axios.post(
+      'https://oauth2.googleapis.com/token',
+      params.toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
+    return data; /* { id_token, access_token, refresh_token?, ... } */
+  } catch (err) {
+    console.error('Token exchange failed:', err.response?.data || err.message);
+    throw new Error('token_exchange_failed');
+  }
+}
+
+
   const { data } = await axios.post(
     'https://oauth2.googleapis.com/token',
     params.toString(),
@@ -113,7 +159,17 @@ router.post('/google/callback', async (req, res) => {
 
   } catch (err) {
     console.error('Auth callback error:', err);
-    return res.status(401).json({ error: 'auth_failed' });
+    const message = err.response?.data?.error || err.message || 'auth_failed';
+    return res.status(401).json({ error: message });
+  }
+});
+
+  } catch (err) {
+    console.error('Auth callback error:', err.response?.data || err.message);
+    return res.status(401).json({
+      error: 'auth_failed',
+      details: err.message
+    });
   }
 });
 

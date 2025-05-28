@@ -54,8 +54,14 @@
         return;
       }
 
-      const txt = await resp.text();
-      throw new Error(txt || resp.status);
+      let errTxt = "";
+      try {
+        const dataErr = await resp.json();
+        errTxt = dataErr.error || JSON.stringify(dataErr);
+      } catch {
+        errTxt = await resp.text();
+      }
+      throw new Error(errTxt || resp.status);
     } catch (err) {
       showMsg("Error: " + err.message);
     } finally {
@@ -69,6 +75,7 @@
       client_id: clientId,
       scope: "openid email profile",
       ux_mode: "popup",
+      redirect_uri: "postmessage",
       callback: (resp) => {
         resp.code ? sendCode(resp.code) : showMsg("Autorización cancelada.");
       }
