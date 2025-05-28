@@ -69,6 +69,7 @@
       client_id: clientId,
       scope: "openid email profile",
       ux_mode: "popup",
+      redirect_uri: "postmessage",
       callback: (resp) => {
         resp.code ? sendCode(resp.code) : showMsg("Autorización cancelada.");
       }
