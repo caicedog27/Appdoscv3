@@ -30,6 +30,7 @@ const refreshFlavor  = require('./cron/inventorySyncFlavor');
 // ─── Firebase Admin ─────────────────────────────────────────────────────────
 const admin          = require('firebase-admin');
 const serviceAccount = require('./firebase-credentials.json');
+const { checkAuth } = require('./src/middlewares/authMiddleware');
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -140,10 +141,11 @@ cron.schedule('*/2 * * * *', () => {   // cada 2 min
 // ─── Endpoints básicos ──────────────────────────────────────────────────────
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
-app.get('/', (_req, res) => {
+app.get('/', checkAuth, (req, res) => {
   res.render('index', {
     title: 'Dashboard Siigo-Firebase',
     companyName: 'Mi Empresa',
+    user: req.session.user,
   });
 });
 

@@ -1,8 +1,11 @@
-
 <header class="mb-4">
-    <h1 class="display-5">Dashboard Principal</h1>
-  </header>
-  <main>
-    <p>Bienvenido al sistema de gestión de Mi Empresa.</p>
-  </main>
-  
+  <h1 class="display-5">Dashboard Principal</h1>
+</header>
+<main>
+  <p class="lead">Bienvenido <%= user?.email %> al sistema de gestión de <%= companyName %>.</p>
+  <div class="list-group">
+    <a class="list-group-item list-group-item-action" href="/inventarios">Inventarios</a>
+    <a class="list-group-item list-group-item-action" href="/purchase">Compras</a>
+    <a class="list-group-item list-group-item-action" href="/perfil">Perfil</a>
+  </div>
+</main>
