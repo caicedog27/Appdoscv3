@@ -3,21 +3,6 @@
   <h1 class="display-5">Dashboard Principal</h1>
 </header>
 <main>
-  <div class="alert alert-success" role="alert">
-    ¡Sesión iniciada correctamente, <strong><%= user?.email %></strong>!
-  </div>
-
-  <p class="lead">Bienvenido al sistema de gestión de <%= companyName %>.</p>
-
-  <div class="mt-4">
-    <h5>Accesos rápidos</h5>
-    <ul class="list-group" style="max-width:320px;">
-      <li class="list-group-item"><a href="/inventarios/producto/Perlas">Inventario Perlas</a></li>
-      <li class="list-group-item"><a href="/inventarios/producto/popping">Inventario Popping</a></li>
-      <li class="list-group-item"><a href="/inventarios/producto/flavor">Inventario Flavor</a></li>
-      <li class="list-group-item"><a href="/purchase/new">Crear Orden de Compra</a></li>
-    </ul>
-  </div>
   <p class="lead">Bienvenido <%= user?.email %> al sistema de gestión de <%= companyName %>.</p>
 </main>
   
