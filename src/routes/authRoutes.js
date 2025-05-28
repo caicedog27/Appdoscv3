@@ -37,7 +37,11 @@ if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !BASE_URL) {
 const oauthClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 /* ─── Helper: code ➜ tokens ───────────────────────────────────────────── */
+
 async function exchangeCode(code) {
+
+async function exchangeCode(code) {
+
   const params = new URLSearchParams({
     code,
     client_id: GOOGLE_CLIENT_ID,
@@ -45,6 +49,7 @@ async function exchangeCode(code) {
     redirect_uri: 'postmessage',
     grant_type: 'authorization_code'
   });
+
   try {
     const { data } = await axios.post(
       'https://oauth2.googleapis.com/token',
@@ -56,6 +61,16 @@ async function exchangeCode(code) {
     console.error('Token exchange failed:', err.response?.data || err.message);
     throw new Error('token_exchange_failed');
   }
+}
+
+
+  const { data } = await axios.post(
+    'https://oauth2.googleapis.com/token',
+    params.toString(),
+    { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+  );
+
+  return data; /* { id_token, access_token, refresh_token?, ... } */
 }
 
 /* ─── Main route ──────────────────────────────────────────────────────── */
