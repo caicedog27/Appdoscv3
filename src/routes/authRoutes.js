@@ -45,6 +45,14 @@ async function exchangeCode(code) {
     redirect_uri: 'postmessage',
     grant_type: 'authorization_code'
   });
+
+  const params = new URLSearchParams({
+    code,
+    client_id: GOOGLE_CLIENT_ID,
+    client_secret: GOOGLE_CLIENT_SECRET,
+    redirect_uri: 'postmessage',
+    grant_type: 'authorization_code'
+  });
   try {
     const { data } = await axios.post(
       'https://oauth2.googleapis.com/token',
