@@ -42,17 +42,20 @@ async function exchangeCode(code) {
     code,
     client_id: GOOGLE_CLIENT_ID,
     client_secret: GOOGLE_CLIENT_SECRET,
-    redirect_uri: `${BASE_URL}/auth/google/callback`,
+    redirect_uri: 'postmessage',
     grant_type: 'authorization_code'
   });
-
-  const { data } = await axios.post(
-    'https://oauth2.googleapis.com/token',
-    params.toString(),
-    { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
-  );
-
-  return data; /* { id_token, access_token, refresh_token?, ... } */
+  try {
+    const { data } = await axios.post(
+      'https://oauth2.googleapis.com/token',
+      params.toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
+    return data; /* { id_token, access_token, refresh_token?, ... } */
+  } catch (err) {
+    console.error('Token exchange failed:', err.response?.data || err.message);
+    throw new Error('token_exchange_failed');
+  }
 }
 
 /* ─── Main route ──────────────────────────────────────────────────────── */
@@ -112,8 +115,11 @@ router.post('/google/callback', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Auth callback error:', err);
-    return res.status(401).json({ error: 'auth_failed' });
+    console.error('Auth callback error:', err.response?.data || err.message);
+    return res.status(401).json({
+      error: 'auth_failed',
+      details: err.message
+    });
   }
 });
 
